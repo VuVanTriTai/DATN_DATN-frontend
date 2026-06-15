@@ -179,6 +179,9 @@ export const api = {
     axiosInstance.post(`/instructor/course/${planId}/lesson`, { afterDayNumber }).then(res => res.data),
   deleteLesson: (lessonId: string) => 
     axiosInstance.delete(`/instructor/lesson/${lessonId}`).then(res => res.data),
+  // Tạo khoá học thủ công — giảng viên nhập tiêu đề + số ngày, sinh khung bài rỗng
+  createManualCourse: (data: { title: string; duration: number }) =>
+    axiosInstance.post('/instructor/manual-course', data).then(r => r.data),
   },
 
   // --- QUẢN LÝ BÀI TẬP (ASSIGNMENT) ---

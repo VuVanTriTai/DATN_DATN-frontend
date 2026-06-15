@@ -3,7 +3,8 @@ import { api } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, Users, Play, GraduationCap, Clock,
-  TrendingUp, Plus, Star, Inbox, CheckCircle
+  TrendingUp, Plus, Star, Inbox, CheckCircle,
+  Sparkles, X, AlertCircle, Loader2, PenSquare,
 } from 'lucide-react';
 import CourseActionMenu from '../../components/shared/CourseActionMenu';
 import { useAuth } from '../../context/AuthContext';
@@ -23,11 +24,139 @@ const SkeletonCard = () => (
   </div>
 );
 
+// ── Modal Tạo thủ công ────────────────────────────────────────────────────────
+interface ManualModalProps {
+  onClose: () => void;
+  onCreated: (planId: string) => void;
+}
+const ManualCourseModal: React.FC<ManualModalProps> = ({ onClose, onCreated }) => {
+  const [title, setTitle] = useState('');
+  const [duration, setDuration] = useState(7);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCreate = async () => {
+    if (!title.trim()) { setError('Vui lòng nhập tiêu đề khoá học.'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await (api.instructor as any).createManualCourse({ title: title.trim(), duration });
+      if (res.success) onCreated(res.data.planId);
+      else setError(res.message || 'Tạo khoá học thất bại.');
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Đã có lỗi xảy ra.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-[#0d1117] border border-white/10 rounded-[2rem] p-8 w-full max-w-lg shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+              <PenSquare size={20} className="text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-white">Tạo khoá học thủ công</h2>
+              <p className="text-xs text-slate-500">Khung bài học rỗng, bạn tự soạn nội dung</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <div className="space-y-5">
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-2">Tiêu đề khoá học</label>
+            <input
+              id="manual-course-title"
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Ví dụ: Lập trình Python cơ bản"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+            />
+          </div>
+
+          {/* Duration */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-400">Số ngày học</label>
+              <span className="text-emerald-400 font-black text-sm">{duration} ngày</span>
+            </div>
+            <input
+              id="manual-course-duration"
+              type="range"
+              min={1} max={30} step={1}
+              value={duration}
+              onChange={e => setDuration(Number(e.target.value))}
+              className="w-full accent-emerald-500 cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-slate-600 mt-1">
+              <span>1 ngày</span><span>30 ngày</span>
+            </div>
+          </div>
+
+          {/* Preview skeleton */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-2">
+              Bộ khung bài học ({duration} bài rỗng)
+            </label>
+            <div className="bg-white/3 border border-white/5 rounded-xl p-3 max-h-36 overflow-y-auto space-y-1.5">
+              {Array.from({ length: duration }, (_, i) => (
+                <div key={i} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg bg-white/3">
+                  <span className="w-5 h-5 rounded-md bg-white/5 flex items-center justify-center text-[10px] font-black text-slate-500">{i + 1}</span>
+                  <span className="text-xs text-slate-500 italic">Ngày {i + 1} — (Chưa có nội dung)</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/15 rounded-xl px-4 py-3">
+              <AlertCircle size={15} />{error}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-sm font-bold transition-all">
+              Huỷ
+            </button>
+            <button
+              id="manual-course-save"
+              onClick={handleCreate}
+              disabled={loading}
+              className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold flex items-center justify-center gap-2 transition-all"
+            >
+              {loading ? <><Loader2 size={15} className="animate-spin" /> Đang tạo...</> : <><Plus size={15} /> Lưu khoá học</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Tab type ──────────────────────────────────────────────────────────────────
+type TabKey = 'submitted' | 'self' | 'reviewed';
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const InstructorCourses = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'submitted' | 'reviewed'>('submitted');
+  const [activeTab, setActiveTab] = useState<TabKey>('submitted');
+  const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -44,16 +173,12 @@ const InstructorCourses = () => {
 
   const totalStudents = courses.reduce((sum, c) => sum + (c.studentCount || 0), 0);
 
-  // Phân loại khoá học:
-  // - Học viên gửi: Khoá học được gán cho giáo viên, hiển thị bản gốc (pending) hoặc bản đang chỉnh sửa (teaching).
-  //   Để tránh trùng lặp trước khi chỉnh sửa, ta ẩn bản gốc (pending) nếu đã có bản sao đang dạy (teaching).
+  // ── Tab 1: Học viên gửi ─────────────────────────────────────────────────────
+  // Khoá học mà học viên KHÁC gửi sang giảng viên (owner khác với user hiện tại)
   const studentSubmitted = courses.filter((c) => {
-    // Không hiển thị khoá học của chính giáo viên tự tạo làm chủ sở hữu
     if (String(c.owner?._id || '') === String(user?.id || '')) return false;
-
     if (c.status === 'teaching') return true;
     if (c.status === 'pending') {
-      // Ẩn bản gốc (pending) nếu trong danh sách đang có bản sao đang chỉnh sửa (teaching)
       const hasTeachingClone = courses.some(
         (other) =>
           other._id !== c._id &&
@@ -66,29 +191,73 @@ const InstructorCourses = () => {
     return false;
   });
 
-  // - Đã qua chỉnh sửa / Tự soạn: Khoá học đã duyệt hoàn tất (status === 'reviewed') hoặc do chính giáo viên sở hữu
-  const reviewedCourses = courses.filter(
-    (c) => c.status === 'reviewed' || String(c.owner?._id || '') === String(user?.id || '')
+  // ── Tab 2: Khoá học tự tạo ──────────────────────────────────────────────────
+  // Khoá học mà owner là chính giảng viên: cùng tài khoản gửi sang hoặc tạo thủ công
+  const selfCourses = courses.filter(
+    (c) => String(c.owner?._id || '') === String(user?.id || '')
   );
 
-  const displayCourses = activeTab === 'submitted' ? studentSubmitted : reviewedCourses;
+  // ── Tab 3: Đã qua chỉnh sửa ─────────────────────────────────────────────────
+  // Khoá học học viên gửi đã được giảng viên duyệt xong (reviewed) — owner là học viên khác
+  const reviewedCourses = courses.filter(
+    (c) =>
+      c.status === 'reviewed' &&
+      String(c.owner?._id || '') !== String(user?.id || '')
+  );
+
+  const tabMap: Record<TabKey, any[]> = {
+    submitted: studentSubmitted,
+    self: selfCourses,
+    reviewed: reviewedCourses,
+  };
+  const displayCourses = tabMap[activeTab];
+
+  const tabs: { key: TabKey; label: string; icon: React.ReactNode; count: number; color: string }[] = [
+    { key: 'submitted', label: 'Học viên gửi',      icon: <Inbox size={15} />,       count: studentSubmitted.length, color: 'purple' },
+    { key: 'self',      label: 'Khoá học tự tạo',   icon: <Sparkles size={15} />,    count: selfCourses.length,      color: 'emerald' },
+    { key: 'reviewed',  label: 'Đã qua chỉnh sửa',  icon: <CheckCircle size={15} />, count: reviewedCourses.length,  color: 'blue' },
+  ];
+
+  const colorMap: Record<string, { active: string; badge: string; underline: string }> = {
+    purple:  { active: 'text-purple-400',  badge: 'bg-purple-500/20 text-purple-400',  underline: 'bg-purple-500' },
+    emerald: { active: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400', underline: 'bg-emerald-500' },
+    blue:    { active: 'text-blue-400',    badge: 'bg-blue-500/20 text-blue-400',       underline: 'bg-blue-500' },
+  };
+
+  // Khi tạo thành công → chuyển đến dashboard + reload
+  const handleCreated = (planId: string) => {
+    setShowModal(false);
+    fetchCourses();
+    navigate(`/instructor/course/${planId}`);
+  };
 
   return (
     <div className="p-8 space-y-8 text-white min-h-screen">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <p className="text-slate-500 text-sm font-medium mb-1">Giảng viên</p>
           <h1 className="text-3xl font-black tracking-tight">Khoá học đang hướng dẫn</h1>
           <p className="text-slate-500 text-sm mt-1.5">Quản lý nội dung và theo dõi tiến độ học viên.</p>
         </div>
-        <button
-          onClick={() => navigate('/create-plan')}
-          className="flex items-center gap-2 px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-purple-900/30 active:scale-95"
-        >
-          <Plus size={18} /> Tạo lộ trình AI
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Tạo thủ công */}
+          <button
+            id="btn-create-manual-course"
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/20 active:scale-95 border border-emerald-500/30"
+          >
+            <PenSquare size={16} /> Tạo thủ công
+          </button>
+          {/* Tạo lộ trình AI */}
+          <button
+            onClick={() => navigate('/create-plan')}
+            className="flex items-center gap-2 px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-purple-900/30 active:scale-95"
+          >
+            <Plus size={18} /> Tạo lộ trình AI
+          </button>
+        </div>
       </div>
 
       {/* ── Stats Banner ── */}
@@ -110,52 +279,44 @@ const InstructorCourses = () => {
         </div>
       )}
 
-      {/* ── Tabs Switcher ── */}
+      {/* ── Tabs ── */}
       <div className="flex items-center gap-6 border-b border-white/5 pb-px">
-        <button
-          onClick={() => setActiveTab('submitted')}
-          className={`flex items-center gap-2.5 pb-4 px-2 text-sm font-bold transition-all relative ${
-            activeTab === 'submitted'
-              ? 'text-purple-400'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Inbox size={16} />
-          <span>Học viên gửi</span>
-          <span className={`px-2 py-0.5 text-xs rounded-full font-black ${
-            activeTab === 'submitted'
-              ? 'bg-purple-500/20 text-purple-400'
-              : 'bg-white/5 text-slate-400'
-          }`}>
-            {studentSubmitted.length}
-          </span>
-          {activeTab === 'submitted' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-full" />
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('reviewed')}
-          className={`flex items-center gap-2.5 pb-4 px-2 text-sm font-bold transition-all relative ${
-            activeTab === 'reviewed'
-              ? 'text-purple-400'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <CheckCircle size={16} />
-          <span>Đã qua chỉnh sửa</span>
-          <span className={`px-2 py-0.5 text-xs rounded-full font-black ${
-            activeTab === 'reviewed'
-              ? 'bg-purple-500/20 text-purple-400'
-              : 'bg-white/5 text-slate-400'
-          }`}>
-            {reviewedCourses.length}
-          </span>
-          {activeTab === 'reviewed' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500 rounded-full" />
-          )}
-        </button>
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.key;
+          const c = colorMap[tab.color];
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2.5 pb-4 px-2 text-sm font-bold transition-all relative ${
+                isActive ? c.active : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              <span className={`px-2 py-0.5 text-xs rounded-full font-black ${
+                isActive ? c.badge : 'bg-white/5 text-slate-400'
+              }`}>
+                {tab.count}
+              </span>
+              {isActive && <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${c.underline} rounded-full`} />}
+            </button>
+          );
+        })}
       </div>
+
+      {/* ── Mô tả tab ── */}
+      {activeTab === 'self' && (
+        <div className="flex items-start gap-3 p-4 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl">
+          <Sparkles size={16} className="text-emerald-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-emerald-400">Khoá học tự tạo</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Bao gồm khoá học bạn tạo thủ công và khoá học từ tài khoản học viên của bạn gửi sang.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Course Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -178,9 +339,15 @@ const InstructorCourses = () => {
                   <div onClick={(e) => e.stopPropagation()}>
                     <CourseActionMenu plan={course} onRefresh={fetchCourses} />
                   </div>
-                  <div className="flex gap-2">
-                    {/* Status Badge */}
-                    {course.owner?._id !== user?.id && (
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    {/* Badge nguồn gốc */}
+                    {course.sourceType === 'manual' && (
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border bg-emerald-500/10 text-emerald-400 border-emerald-500/15">
+                        Thủ công
+                      </span>
+                    )}
+                    {/* Status Badge (chỉ khi owner là học viên khác) */}
+                    {String(course.owner?._id || '') !== String(user?.id || '') && (
                       <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border ${
                         course.status === 'reviewed'
                           ? 'bg-purple-500/10 text-purple-400 border-purple-500/15'
@@ -188,11 +355,7 @@ const InstructorCourses = () => {
                           ? 'bg-blue-500/10 text-blue-400 border-blue-500/15'
                           : 'bg-slate-500/10 text-slate-400 border-slate-500/15'
                       }`}>
-                        {course.status === 'reviewed'
-                          ? 'Đã gửi học viên'
-                          : course.status === 'teaching'
-                          ? 'Đang chỉnh sửa'
-                          : 'Bản gốc'}
+                        {course.status === 'reviewed' ? 'Đã gửi học viên' : course.status === 'teaching' ? 'Đang chỉnh sửa' : 'Bản gốc'}
                       </span>
                     )}
                     <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border
@@ -213,7 +376,9 @@ const InstructorCourses = () => {
                   </h3>
                   <p className="text-slate-500 text-xs font-medium flex items-center gap-1.5">
                     <Users size={12} className="text-slate-600" />
-                    Chủ sở hữu: {course.owner?.fullName || 'Học viên'}
+                    {String(course.owner?._id || '') === String(user?.id || '')
+                      ? 'Khoá học của bạn'
+                      : `Chủ sở hữu: ${course.owner?.fullName || 'Học viên'}`}
                   </p>
                 </div>
 
@@ -243,24 +408,32 @@ const InstructorCourses = () => {
         ) : (
           <div className="col-span-full py-20 text-center rounded-[2.5rem] border border-dashed border-white/8 space-y-5">
             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto">
-              {activeTab === 'submitted' ? (
-                <Inbox size={28} className="text-slate-500" />
-              ) : (
-                <CheckCircle size={28} className="text-slate-500" />
-              )}
+              {activeTab === 'submitted' ? <Inbox size={28} className="text-slate-500" />
+                : activeTab === 'self' ? <Sparkles size={28} className="text-slate-500" />
+                : <CheckCircle size={28} className="text-slate-500" />}
             </div>
             <div>
               <p className="text-slate-400 font-bold">
-                {activeTab === 'submitted'
-                  ? 'Không có khoá học học viên gửi đang chờ duyệt.'
+                {activeTab === 'submitted' ? 'Không có khoá học học viên gửi đang chờ.'
+                  : activeTab === 'self' ? 'Bạn chưa có khoá học tự tạo nào.'
                   : 'Không có khoá học nào đã qua chỉnh sửa.'}
               </p>
               <p className="text-slate-500 text-sm mt-1">
                 {activeTab === 'submitted'
                   ? 'Khi học viên đăng ký lộ trình của bạn làm hướng dẫn, nó sẽ xuất hiện ở đây.'
+                  : activeTab === 'self'
+                  ? 'Nhấn "Tạo thủ công" để soạn khoá học riêng hoặc tạo lộ trình AI từ tài liệu.'
                   : 'Hãy xem qua các lộ trình học viên gửi và hoàn tất chỉnh sửa để gửi lại.'}
               </p>
             </div>
+            {activeTab === 'self' && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                <PenSquare size={16} /> Tạo thủ công ngay
+              </button>
+            )}
             {activeTab === 'reviewed' && (
               <button
                 onClick={() => navigate('/create-plan')}
@@ -272,6 +445,14 @@ const InstructorCourses = () => {
           </div>
         )}
       </div>
+
+      {/* ── Modal Tạo thủ công ── */}
+      {showModal && (
+        <ManualCourseModal
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
     </div>
   );
 };
