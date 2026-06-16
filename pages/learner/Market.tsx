@@ -4,7 +4,8 @@ import {
   Search, RotateCcw, Eye, 
   DownloadCloud, X, Lock, BookOpen, 
   Layers, Info, Loader2, Sparkles, User,
-  CheckCircle2, AlertTriangle, Star
+  CheckCircle2, AlertTriangle, Star,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -72,6 +73,10 @@ const Market = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCourses, setTotalCourses] = useState(0);
+  
   const [filters, setFilters] = useState({
     search: '',
     instructorSearch: '',
@@ -86,18 +91,35 @@ const Market = () => {
   };
 
 
-  useEffect(() => { fetchMarketCourses(); }, [filters]);
-
-  const fetchMarketCourses = async () => {
+  const fetchMarketCourses = useCallback(async (pageToFetch = 1) => {
     try {
       setLoading(true);
-      const res = await api.market.getCourses({ ...filters, isPublic: true });
-      if (res.success) setCourses(res.data.courses);
+      const res = await api.market.getCourses({ 
+        ...filters, 
+        page: pageToFetch, 
+        limit: 12, 
+        isPublic: true 
+      });
+      if (res.success) {
+        setCourses(res.data.courses || []);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalCourses(res.data.total || 0);
+        setCurrentPage(res.data.currentPage || pageToFetch);
+      }
     } catch (err) {
       console.error("Lỗi lấy danh sách Market:", err);
     } finally {
       setLoading(false);
     }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchMarketCourses(1);
+  }, [filters, fetchMarketCourses]);
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    fetchMarketCourses(page);
   };
 
   const handleOpenPreview = async (course: any) => {
@@ -125,8 +147,8 @@ const Market = () => {
       if (res.success) {
         setConfirmCourse(null);
         setPreviewData(null);
-        showToast('🎉 Lấy lộ trình thành công! Đang chuyển hướng...');
-        setTimeout(() => navigate('/my-imports'), 1500);
+        showToast('🎉 Lấy lộ trình thành công! Đang chuyển về Lộ trình học...');
+        setTimeout(() => navigate('/dashboard'), 1500);
       }
     } catch (err) { showToast('Lỗi khi sao chép lộ trình.', 'error'); }
     finally { setIsImporting(false); }
@@ -226,7 +248,7 @@ const Market = () => {
 
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-slate-500">
-            Tìm thấy <span className="text-white font-bold">{courses.length}</span> khóa học
+            Tìm thấy <span className="text-white font-bold">{totalCourses}</span> khóa học
             {filters.instructorSearch && (
               <span className="ml-2 text-violet-400 font-bold">· Giảng viên: "{filters.instructorSearch}"</span>
             )}
@@ -314,6 +336,64 @@ const Market = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* PAGINATION CONTROLS */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8 pt-4">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none text-slate-300 active:scale-95"
+            title="Trang trước"
+          >
+            <ChevronLeft size={18} />
+          </button>
+
+          {Array.from({ length: totalPages }).map((_, i) => {
+            const pageNum = i + 1;
+            const isSelected = pageNum === currentPage;
+            const showPage = 
+              totalPages <= 7 || 
+              pageNum === 1 || 
+              pageNum === totalPages || 
+              (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+
+            if (!showPage) {
+              if (pageNum === 2 || pageNum === totalPages - 1) {
+                return (
+                  <span key={`ellipsis-${pageNum}`} className="w-10 h-10 flex items-center justify-center text-slate-500 font-bold text-sm">
+                    ...
+                  </span>
+                );
+              }
+              return null;
+            }
+
+            return (
+              <button
+                key={pageNum}
+                onClick={() => handlePageChange(pageNum)}
+                className={`w-10 h-10 rounded-xl font-bold text-sm transition-all active:scale-95 border
+                  ${isSelected 
+                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20' 
+                    : 'bg-slate-800 border-slate-700/50 hover:bg-slate-700 hover:text-white text-slate-300'
+                  }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none text-slate-300 active:scale-95"
+            title="Trang sau"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       )}
 

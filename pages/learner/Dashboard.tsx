@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import {
   BookOpen, ChevronRight, LayoutGrid, UserCheck,
-  DownloadCloud, TrendingUp, CheckCircle2, Zap, Plus
+  DownloadCloud, TrendingUp, CheckCircle2, Zap, Plus,
+  ShoppingBag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -199,6 +200,13 @@ const Dashboard = () => {
                   {plan.title}
                 </h3>
 
+                {/* Imported badge */}
+                {(plan.sourceType === 'imported' || plan.sourceType === 'shared_import') && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/15 px-2.5 py-1.5 rounded-lg w-fit">
+                    <DownloadCloud size={11} /> Lấy từ Market
+                  </div>
+                )}
+
                 {/* Progress */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
@@ -233,21 +241,41 @@ const Dashboard = () => {
             </div>
           ))
         ) : (
-          /* Empty State */
+          /* Empty State - context-aware */
           <div className="col-span-full py-20 text-center rounded-[2.5rem] border border-dashed border-white/8 space-y-5">
             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto">
-              <BookOpen size={28} className="text-slate-600" />
+              {sourceFilter === 'imported'
+                ? <DownloadCloud size={28} className="text-slate-600" />
+                : <BookOpen size={28} className="text-slate-600" />}
             </div>
             <div>
-              <p className="text-slate-400 font-bold">Không có lộ trình nào trong mục này.</p>
-              <p className="text-slate-600 text-sm mt-1">Hãy tạo lộ trình mới để bắt đầu học!</p>
+              {sourceFilter === 'imported' ? (
+                <>
+                  <p className="text-slate-400 font-bold">Bạn chưa lấy khoá học nào về.</p>
+                  <p className="text-slate-600 text-sm mt-1">Hãy khám phá Market để tìm lộ trình phù hợp!</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-slate-400 font-bold">Không có lộ trình nào trong mục này.</p>
+                  <p className="text-slate-600 text-sm mt-1">Hãy tạo lộ trình mới để bắt đầu học!</p>
+                </>
+              )}
             </div>
-            <button
-              onClick={() => navigate('/create-plan')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all"
-            >
-              <Plus size={16} /> Tạo lộ trình ngay
-            </button>
+            {sourceFilter === 'imported' ? (
+              <button
+                onClick={() => navigate('/market')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                <ShoppingBag size={16} /> Khám phá Market
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/create-plan')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                <Plus size={16} /> Tạo lộ trình ngay
+              </button>
+            )}
           </div>
         )}
       </div>

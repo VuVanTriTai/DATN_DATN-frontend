@@ -22,7 +22,6 @@ import Market from './pages/learner/Market';
 import InstructorDirectory from './pages/learner/InstructorDirectory';
 import TeachingFields from './pages/instructor/TeachingFields';
 import InstructorMarketListings from './pages/instructor/InstructorMarketListings';
-import LearnerImportedCourses from './pages/learner/LearnerImportedCourses';
 import Friends from './pages/learner/Friends';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -90,7 +89,7 @@ function AppRoutes() {
           <ProtectedRoute allowedRole="learner"><Market /></ProtectedRoute>
         } />
         <Route path="my-imports" element={
-          <ProtectedRoute allowedRole="learner"><LearnerImportedCourses /></ProtectedRoute>
+          <Navigate to="/dashboard" replace />
         } />
         <Route path="shared-plans" element={
           <ProtectedRoute allowedRole="learner"><SharedPlans /></ProtectedRoute>

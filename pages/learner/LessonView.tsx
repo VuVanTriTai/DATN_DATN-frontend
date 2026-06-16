@@ -350,10 +350,44 @@ const LessonView = () => {
   const [uploadingAssignment, setUploadingAssignment] = useState(false);
   const [gradingAssignment, setGradingAssignment] = useState(false);
 
+  // Regenerate lesson content state
+  const [regeneratingContent, setRegeneratingContent] = useState(false);
+
   const handleGoToMarket = useCallback(() => {
     setShowLowScoreModal(false);
     navigate('/market');
   }, [navigate]);
+
+  // ── Tạo lại nội dung bài học bằng AI ──────────────────────────────────────
+  const handleRegenerateContent = async () => {
+    const confirmed = window.confirm(
+      '⚠️ AI sẽ viết lại toàn bộ nội dung bài học này dựa trên tài liệu gốc.\n' +
+      'Nội dung hiện tại sẽ bị thay thế và bộ câu hỏi trắc nghiệm cũng sẽ bị xoá để tạo mới.\n\n' +
+      'Bạn có chắc muốn tiếp tục không?'
+    );
+    if (!confirmed) return;
+
+    try {
+      setRegeneratingContent(true);
+      await api.plan.regenerateLesson(id!, dayNumber!);
+
+      // Tải lại dữ liệu bài học mới từ server
+      const refreshed = await api.plan.getLesson(id!, dayNumber!);
+      if (refreshed.success) {
+        setLesson(refreshed.data);
+        // Reset trạng thái quiz vì quizPool đã bị xoá
+        setQuizQuestions([]);
+        setQuizResult(null);
+        setSelectedAnswers({});
+        setQuizFailed(false);
+        alert('✅ Đã tạo lại nội dung bài học thành công! Bộ câu hỏi mới sẽ được tạo khi bạn vào tab Trắc nghiệm.');
+      }
+    } catch (e: any) {
+      alert('❌ Lỗi khi tạo lại nội dung: ' + (e?.response?.data?.message || e.message));
+    } finally {
+      setRegeneratingContent(false);
+    }
+  };
 
   // ── Tải dữ liệu bài học ────────────────────────────────────────────────────
   useEffect(() => {
@@ -627,7 +661,55 @@ const LessonView = () => {
       case 'study':
         return (
           <div className="prose prose-invert max-w-none animate-in fade-in slide-in-from-bottom-4">
-            <div className="bg-[#1e293b]/10 backdrop-blur-md p-8 lg:p-12 rounded-[2.5rem] border border-slate-800/80 leading-relaxed text-slate-300 shadow-xl">
+            <div className="bg-[#1e293b]/10 backdrop-blur-md p-8 lg:p-12 rounded-[2.5rem] border border-slate-800/80 leading-relaxed text-slate-300 shadow-xl relative">
+
+              {/* ── Nút Tạo lại nội dung AI ───────────────────────────────── */}
+              <div className="flex justify-end mb-6">
+                <button
+                  id="btn-regenerate-lesson-content"
+                  onClick={handleRegenerateContent}
+                  disabled={regeneratingContent}
+                  title="Yêu cầu AI viết lại nội dung bài học này"
+                  className={`
+                    inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                    transition-all duration-300
+                    ${regeneratingContent
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-70'
+                      : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg hover:shadow-violet-500/25 hover:scale-105 active:scale-95'
+                    }
+                  `}
+                >
+                  {regeneratingContent ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>AI đang tạo lại nội dung…</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Tạo lại nội dung với AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* ── Loading overlay khi AI đang xử lý ───────────────────── */}
+              {regeneratingContent && (
+                <div className="absolute inset-0 bg-[#0f172a]/80 backdrop-blur-sm rounded-[2.5rem] flex flex-col items-center justify-center gap-4 z-10">
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full border-4 border-violet-500/30 border-t-violet-500 animate-spin" />
+                    <div className="absolute w-10 h-10 rounded-full border-4 border-indigo-500/30 border-b-indigo-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.9s' }} />
+                  </div>
+                  <p className="text-slate-300 font-semibold text-base">AI đang viết lại bài giảng…</p>
+                  <p className="text-slate-500 text-sm">Quá trình này mất khoảng 30–60 giây, vui lòng chờ.</p>
+                </div>
+              )}
+
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{

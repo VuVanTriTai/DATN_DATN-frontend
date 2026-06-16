@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   Save, Send, ArrowLeft, BookOpen,
   CheckCircle, Loader2, MessageSquare,
@@ -12,6 +13,7 @@ import "easymde/dist/easymde.min.css";
 const StudentPlanView = () => {
   const { planId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [data, setData] = useState<any>(null);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -119,8 +121,27 @@ const StudentPlanView = () => {
   };
 
   // Mở modal chọn cách lưu
-  const handleSaveLesson = () => {
+  const handleSaveLesson = async () => {
     if (!selectedLesson) return;
+
+    // Nếu là khóa học tự tạo/thủ công (owner là chính mình) -> Lưu ghi đè trực tiếp luôn, không hỏi han
+    if (data?.ownerId && String(data.ownerId) === String(user?.id)) {
+      setIsSaving(true);
+      try {
+        await api.instructor.updateLesson(selectedLesson._id, selectedLesson);
+        const updatedLessons = data.lessons.map((l: any) =>
+          l._id === selectedLesson._id ? selectedLesson : l
+        );
+        setData({ ...data, lessons: updatedLessons });
+        alert('✅ Đã lưu bài học thành công!');
+      } catch (e) {
+        alert('❌ Lỗi khi lưu bài học');
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     setShowSaveModal(true);
   };
 
@@ -474,7 +495,11 @@ const StudentPlanView = () => {
 
         <div className="space-y-1">
           <h2 className="text-xl font-black text-blue-400 line-clamp-1">{data?.planTitle}</h2>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Học viên: {data?.studentName}</p>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+            {data?.ownerId && String(data.ownerId) === String(user?.id)
+              ? "Khoá học tự tạo"
+              : `Học viên: ${data?.studentName}`}
+          </p>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
@@ -811,17 +836,19 @@ const StudentPlanView = () => {
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 bg-[#1e293b]/40 border-t border-slate-800 space-y-3">
-          <button
-            onClick={handleSendBack}
-            disabled={isSending}
-            className="w-full max-w-4xl mx-auto block py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl transition-all disabled:opacity-50"
-          >
-            {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            Gửi bản chỉnh sửa hoàn chỉnh cho học viên
-          </button>
-        </div>
+        {/* Footer Actions — Chỉ hiển thị khi là khoá học học viên gửi (ownerId khác user.id) */}
+        {data?.ownerId && String(data.ownerId) !== String(user?.id) && (
+          <div className="p-6 bg-[#1e293b]/40 border-t border-slate-800 space-y-3">
+            <button
+              onClick={handleSendBack}
+              disabled={isSending}
+              className="w-full max-w-4xl mx-auto block py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-xl transition-all disabled:opacity-50"
+            >
+              {isSending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              Gửi bản chỉnh sửa hoàn chỉnh cho học viên
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

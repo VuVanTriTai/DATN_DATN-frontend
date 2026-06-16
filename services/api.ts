@@ -86,9 +86,12 @@ export const api = {
     getSharedWithMe: () => 
         axiosInstance.get("/plan/shared/me").then(res => res.data),
 
+    // Yêu cầu AI tạo lại nội dung bài học cho 1 ngày cụ thể
+    regenerateLesson: (planId: string, dayNumber: number | string) =>
+        axiosInstance.post(`/plan/${planId}/lesson/${dayNumber}/regenerate`).then(res => res.data),
+
 
   
-
   },
   market: {
     // Lấy danh sách khóa học (hỗ trợ filter search, category, level, instructorSearch)

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, BookOpen, FilePlus, Users,
   Settings, LogOut, Share2, FolderOpen,
   ChevronDown, GraduationCap, School, Check,
-  ShoppingBag, Star, Globe, DownloadCloud,
+  ShoppingBag, Star, Globe,
   ChevronLeft, ChevronRight, Sparkles, UserCheck
 } from 'lucide-react';
 
@@ -21,7 +21,6 @@ const Sidebar: React.FC = () => {
     { icon: <FilePlus size={20} />, label: 'Tạo lộ trình AI', path: '/create-plan' },
     { icon: <FolderOpen size={20} />, label: 'Tài liệu đã tải', path: '/documents' },
     { icon: <ShoppingBag size={20} />, label: 'Cửa hàng (Market)', path: '/market' },
-    { icon: <DownloadCloud size={20} />, label: 'Khoá học đã lấy về', path: '/my-imports' },
     { icon: <Share2 size={20} />, label: 'Được chia sẻ', path: '/shared-plans' },
     { icon: <Users size={20} />, label: 'Thư mục Giáo viên', path: '/instructors' },
     { icon: <UserCheck size={20} />, label: 'Bạn bè', path: '/friends' },
