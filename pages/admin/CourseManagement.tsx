@@ -285,14 +285,14 @@ const CourseManagement: React.FC = () => {
                           className="p-2 bg-white/5 hover:bg-white/15 rounded-xl text-slate-400 hover:text-white transition-all">
                           <Eye size={14} />
                         </button>
-                        {/* Toggle Featured */}
-                        {course.isPublic && (
+                        {/* Toggle Featured — tạm ẩn */}
+                        {/* {course.isPublic && (
                           <button onClick={() => handleToggleFeatured(course)}
                             title={course.tags?.includes('featured') ? 'Bỏ nổi bật' : 'Gắn nổi bật'}
                             className={`p-2 rounded-xl transition-all ${course.tags?.includes('featured') ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' : 'bg-white/5 text-slate-400 hover:bg-yellow-500/20 hover:text-yellow-400'}`}>
                             <Tag size={14} />
                           </button>
-                        )}
+                        )} */}
                         {/* Delete */}
                         <button onClick={() => handleDelete(course)} title="Xoá khoá học"
                           className="p-2 bg-white/5 hover:bg-red-600/30 rounded-xl text-slate-400 hover:text-red-400 transition-all">

@@ -39,8 +39,8 @@ const SharedPlans = () => {
           alert("Thành công! Lộ trình đã nằm trong mục 'Lộ trình lấy về'.");
           navigate('/dashboard'); 
         }
-      } catch (err) {
-        alert("Không thể lấy lộ trình.");
+      } catch (err: any) {
+        alert("Không thể lấy lộ trình: " + (err.response?.data?.message || err.message));
       }
     }
   };

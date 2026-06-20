@@ -29,7 +29,7 @@ const Sidebar: React.FC = () => {
 
   const instructorMenu = [
     { icon: <LayoutDashboard size={20} />, label: 'Khóa học của tôi', path: '/instructor/courses' },
-    { icon: <FilePlus size={20} />, label: 'Tạo lộ trình AI', path: '/create-plan' },
+    // { icon: <FilePlus size={20} />, label: 'Tạo lộ trình AI', path: '/create-plan' }, // tạm ẩn
     { icon: <Star size={20} />, label: 'Lĩnh vực giảng dạy', path: '/instructor/teaching-fields' },
     { icon: <Globe size={20} />, label: 'Quản lý Market', path: '/instructor/market-listings' },
   ];
@@ -73,7 +73,7 @@ const Sidebar: React.FC = () => {
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-black text-white tracking-tight">AI Buddy</span>
+              <span className="text-base font-black text-white tracking-tight">AI Course</span>
               <p className={`text-[9px] font-bold uppercase tracking-[0.15em] mt-0.5
                 ${isLearner ? 'text-blue-500' : 'text-purple-500'}`}>
                 {isLearner ? 'Học viên' : 'Giảng viên'}

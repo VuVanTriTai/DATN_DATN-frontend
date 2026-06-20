@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿//Document quản lý tài liệu của học viên: xem danh sách, xem chi tiết, tải về, xóa tài liệu đã upload lên hệ thống. Đây là nơi lưu trữ các nguồn tri thức mà AI sẽ sử dụng để thiết kế lộ trình và huấn luyện trợ lý AI cá nhân hóa cho học viên.
+import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { 
   FileText, Download, Trash2, Clock, 
@@ -314,7 +315,7 @@ const Documents = () => {
             {/* Footer Modal */}
             <div className="p-6 border-t border-slate-800 bg-[#1e293b] flex justify-between items-center px-10">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden md:block">
-                  Hệ thống trích xuất tri thức AI Buddy
+                  Hệ thống trích xuất tri thức AI Course
               </p>
               <div className="flex gap-3 w-full md:w-auto">
                 <button onClick={() => setSelectedDoc(null)} className="flex-1 md:flex-none px-8 py-3 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 transition-all">Đóng</button>

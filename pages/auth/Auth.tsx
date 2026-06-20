@@ -125,7 +125,7 @@ const Auth = () => {
               <Sparkles className="text-white" size={26} />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">
-              {isLogin ? 'Chào mừng trở lại!' : 'Gia nhập AI Buddy'}
+              {isLogin ? 'Chào mừng trở lại!' : 'Gia nhập AI Course'}
             </h1>
             <p className="text-slate-500 text-sm mt-1.5 font-medium">
               {isLogin
@@ -292,7 +292,7 @@ const Auth = () => {
 
         {/* Footer */}
         <p className="text-center text-slate-700 text-xs mt-4 font-medium">
-          AI Buddy — Nền tảng học tập thích ứng cùng AI
+          AI Course — Nền tảng học tập thích ứng cùng AI
         </p>
       </div>
     </div>

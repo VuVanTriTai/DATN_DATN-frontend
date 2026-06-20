@@ -164,47 +164,73 @@ const InstructorCourses = () => {
     try {
       setLoading(true);
       const res = await api.instructor.getMyCourses();
-      if (res.success) setCourses(res.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+      if (res.success) {
+        setCourses(res.data);
+
+        // DEBUG: kiểm tra tab Học viên gửi
+        const submitted = res.data.filter((c: any) => {
+          if (String(c.owner?._id || '') === String(user?.id || '')) return false;
+          if (c.status === 'teaching') return true;
+          return false;
+        });
+
+        console.log('=== DEBUG getMyCourses ===');
+        console.log('Total courses:', res.data.length);
+        console.log('studentSubmitted count:', submitted.length);
+        res.data.forEach((c: any) => {
+          console.log({
+            id: c._id,
+            title: c.title,
+            owner: c.owner,
+            instructorId: c.instructorId,
+            status: c.status,
+            sourceType: c.sourceType,
+            originalPlanId: c.originalPlanId,
+          });
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchCourses(); }, []);
 
   const totalStudents = courses.reduce((sum, c) => sum + (c.studentCount || 0), 0);
 
-  // ── Tab 1: Học viên gửi ─────────────────────────────────────────────────────
-  // Khoá học mà học viên KHÁC gửi sang giảng viên (owner khác với user hiện tại)
-  const studentSubmitted = courses.filter((c) => {
-    if (String(c.owner?._id || '') === String(user?.id || '')) return false;
-    if (c.status === 'teaching') return true;
-    if (c.status === 'pending') {
-      const hasTeachingClone = courses.some(
-        (other) =>
-          other._id !== c._id &&
-          String(other.owner?._id || '') === String(c.owner?._id || '') &&
-          other.title === c.title &&
-          other.status === 'teaching'
-      );
-      return !hasTeachingClone;
-    }
-    return false;
-  });
+  
+  // ── Tab 1: Học viên gửi (Đang chờ duyệt) ──
+  // Điều kiện: Bạn là instructorId VÀ owner KHÔNG PHẢI là bạn VÀ status là 'teaching'
+  // InstructorCourses.tsx
 
-  // ── Tab 2: Khoá học tự tạo ──────────────────────────────────────────────────
-  // Khoá học mà owner là chính giảng viên: cùng tài khoản gửi sang hoặc tạo thủ công
-  const selfCourses = courses.filter(
-    (c) => String(c.owner?._id || '') === String(user?.id || '')
-  );
+// 1. Tab: Học viên gửi (Đang cần giảng viên duyệt/sửa)
+const studentSubmitted = courses.filter((c) => 
+  // Bạn là giảng viên
+  String(c.instructorId || '') === String(user?.id || '') && 
+  // Bạn KHÔNG PHẢI là chủ sở hữu (Chủ là sinh viên)
+  String(c.owner?._id || String(c.owner) || '') !== String(user?.id || '') &&
+  // Trạng thái đang giảng dạy
+  c.status === 'teaching'
+);
 
-  // ── Tab 3: Đã qua chỉnh sửa ─────────────────────────────────────────────────
-  // Khoá học học viên gửi đã được giảng viên duyệt xong (reviewed) — owner là học viên khác
-  const reviewedCourses = courses.filter(
-    (c) =>
-      c.status === 'reviewed' &&
-      String(c.owner?._id || '') !== String(user?.id || '')
-  );
+// 2. Tab: Khoá học tự tạo (Kho riêng của giảng viên)
+const selfCourses = courses.filter((c) => 
+  // Bạn PHẢI là chủ sở hữu
+  String(c.owner?._id || String(c.owner) || '') === String(user?.id || '') &&
+  // Loại bỏ các bản clone trung gian nếu có
+  (c.sourceType === 'manual' || c.sourceType === 'self' || !c.originalPlanId) &&
+  // Không hiển thị các khóa đang ở trạng thái 'teaching' của học viên khác
+  c.status !== 'teaching'
+);
 
+// 3. Tab: Đã qua chỉnh sửa (Các khóa đã xong và gửi lại sinh viên)
+const reviewedCourses = courses.filter((c) => 
+  String(c.instructorId || '') === String(user?.id || '') && 
+  String(c.owner?._id || String(c.owner) || '') !== String(user?.id || '') &&
+  c.status === 'reviewed'
+);
   const tabMap: Record<TabKey, any[]> = {
     submitted: studentSubmitted,
     self: selfCourses,
@@ -213,15 +239,15 @@ const InstructorCourses = () => {
   const displayCourses = tabMap[activeTab];
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode; count: number; color: string }[] = [
-    { key: 'submitted', label: 'Học viên gửi',      icon: <Inbox size={15} />,       count: studentSubmitted.length, color: 'purple' },
-    { key: 'self',      label: 'Khoá học tự tạo',   icon: <Sparkles size={15} />,    count: selfCourses.length,      color: 'emerald' },
-    { key: 'reviewed',  label: 'Đã qua chỉnh sửa',  icon: <CheckCircle size={15} />, count: reviewedCourses.length,  color: 'blue' },
+    { key: 'submitted', label: 'Học viên gửi', icon: <Inbox size={15} />, count: studentSubmitted.length, color: 'purple' },
+    { key: 'self', label: 'Khoá học tự tạo', icon: <Sparkles size={15} />, count: selfCourses.length, color: 'emerald' },
+    { key: 'reviewed', label: 'Đã qua chỉnh sửa', icon: <CheckCircle size={15} />, count: reviewedCourses.length, color: 'blue' },
   ];
 
   const colorMap: Record<string, { active: string; badge: string; underline: string }> = {
-    purple:  { active: 'text-purple-400',  badge: 'bg-purple-500/20 text-purple-400',  underline: 'bg-purple-500' },
+    purple: { active: 'text-purple-400', badge: 'bg-purple-500/20 text-purple-400', underline: 'bg-purple-500' },
     emerald: { active: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400', underline: 'bg-emerald-500' },
-    blue:    { active: 'text-blue-400',    badge: 'bg-blue-500/20 text-blue-400',       underline: 'bg-blue-500' },
+    blue: { active: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400', underline: 'bg-blue-500' },
   };
 
   // Khi tạo thành công → chuyển đến dashboard + reload
@@ -242,21 +268,21 @@ const InstructorCourses = () => {
           <p className="text-slate-500 text-sm mt-1.5">Quản lý nội dung và theo dõi tiến độ học viên.</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Tạo thủ công */}
-          <button
+          {/* Tạo thủ công — tạm ẩn */}
+          {/* <button
             id="btn-create-manual-course"
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-5 py-3 bg-emerald-600/80 hover:bg-emerald-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-900/20 active:scale-95 border border-emerald-500/30"
           >
             <PenSquare size={16} /> Tạo thủ công
-          </button>
-          {/* Tạo lộ trình AI */}
-          <button
+          </button> */}
+          {/* Tạo lộ trình AI — tạm ẩn */}
+          {/* <button
             onClick={() => navigate('/create-plan')}
             className="flex items-center gap-2 px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-purple-900/30 active:scale-95"
           >
             <Plus size={18} /> Tạo lộ trình AI
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -264,9 +290,20 @@ const InstructorCourses = () => {
       {!loading && courses.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { icon: <BookOpen size={20} className="text-purple-400" />, label: 'Tổng khoá học', value: courses.length, color: 'bg-purple-500/5 border-purple-500/15' },
+            {
+              icon: <BookOpen size={20} className="text-purple-400" />,
+              label: 'Danh sách khoá học',
+              // Đếm tổng từ 3 tab đã lọc, không dùng courses.length
+              value: studentSubmitted.length + selfCourses.length + reviewedCourses.length,
+              color: 'bg-purple-500/5 border-purple-500/15'
+            },
             { icon: <Users size={20} className="text-blue-400" />, label: 'Tổng học viên', value: totalStudents, color: 'bg-blue-500/5 border-blue-500/15' },
-            { icon: <Star size={20} className="text-amber-400" />, label: 'Trên Marketplace', value: courses.filter(c => c.isPublic).length, color: 'bg-amber-500/5 border-amber-500/15' },
+            {
+              icon: <Star size={20} className="text-amber-400" />,
+              label: 'Trên Marketplace',
+              value: courses.filter(c => c.isPublic).length,
+              color: 'bg-amber-500/5 border-amber-500/15'
+            },
           ].map((stat, i) => (
             <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border ${stat.color}`}>
               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">{stat.icon}</div>
@@ -288,15 +325,13 @@ const InstructorCourses = () => {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2.5 pb-4 px-2 text-sm font-bold transition-all relative ${
-                isActive ? c.active : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`flex items-center gap-2.5 pb-4 px-2 text-sm font-bold transition-all relative ${isActive ? c.active : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               {tab.icon}
               <span>{tab.label}</span>
-              <span className={`px-2 py-0.5 text-xs rounded-full font-black ${
-                isActive ? c.badge : 'bg-white/5 text-slate-400'
-              }`}>
+              <span className={`px-2 py-0.5 text-xs rounded-full font-black ${isActive ? c.badge : 'bg-white/5 text-slate-400'
+                }`}>
                 {tab.count}
               </span>
               {isActive && <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${c.underline} rounded-full`} />}
@@ -340,30 +375,22 @@ const InstructorCourses = () => {
                     <CourseActionMenu plan={course} onRefresh={fetchCourses} />
                   </div>
                   <div className="flex gap-2 flex-wrap justify-end">
-                    {/* Badge nguồn gốc */}
+                    {/* Badge sourceType: Thủ công */}
                     {course.sourceType === 'manual' && (
                       <span className="text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border bg-emerald-500/10 text-emerald-400 border-emerald-500/15">
                         Thủ công
                       </span>
                     )}
-                    {/* Status Badge (chỉ khi owner là học viên khác) */}
-                    {String(course.owner?._id || '') !== String(user?.id || '') && (
-                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border ${
-                        course.status === 'reviewed'
-                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/15'
-                          : course.status === 'teaching'
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/15'
-                          : 'bg-slate-500/10 text-slate-400 border-slate-500/15'
-                      }`}>
-                        {course.status === 'reviewed' ? 'Đã gửi học viên' : course.status === 'teaching' ? 'Đang chỉnh sửa' : 'Bản gốc'}
-                      </span>
-                    )}
+
+                    {/* ❌ XOÁ TOÀN BỘ BLOCK BADGE STATUS (Bản gốc / Đang chỉnh sửa / Đã gửi học viên) */}
+
+                    {/* Badge level */}
                     <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider border
-                      ${course.level === 'Hard'
+      ${course.level === 'Hard'
                         ? 'bg-red-500/10 text-red-400 border-red-500/15'
                         : course.level === 'Medium'
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/15'
-                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15'}`}>
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/15'
+                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15'}`}>
                       {course.level || 'Medium'}
                     </span>
                   </div>
@@ -410,20 +437,20 @@ const InstructorCourses = () => {
             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto">
               {activeTab === 'submitted' ? <Inbox size={28} className="text-slate-500" />
                 : activeTab === 'self' ? <Sparkles size={28} className="text-slate-500" />
-                : <CheckCircle size={28} className="text-slate-500" />}
+                  : <CheckCircle size={28} className="text-slate-500" />}
             </div>
             <div>
               <p className="text-slate-400 font-bold">
                 {activeTab === 'submitted' ? 'Không có khoá học học viên gửi đang chờ.'
                   : activeTab === 'self' ? 'Bạn chưa có khoá học tự tạo nào.'
-                  : 'Không có khoá học nào đã qua chỉnh sửa.'}
+                    : 'Không có khoá học nào đã qua chỉnh sửa.'}
               </p>
               <p className="text-slate-500 text-sm mt-1">
                 {activeTab === 'submitted'
                   ? 'Khi học viên đăng ký lộ trình của bạn làm hướng dẫn, nó sẽ xuất hiện ở đây.'
                   : activeTab === 'self'
-                  ? 'Nhấn "Tạo thủ công" để soạn khoá học riêng hoặc tạo lộ trình AI từ tài liệu.'
-                  : 'Hãy xem qua các lộ trình học viên gửi và hoàn tất chỉnh sửa để gửi lại.'}
+                    ? 'Nhấn "Tạo thủ công" để soạn khoá học riêng hoặc tạo lộ trình AI từ tài liệu.'
+                    : 'Hãy xem qua các lộ trình học viên gửi và hoàn tất chỉnh sửa để gửi lại.'}
               </p>
             </div>
             {activeTab === 'self' && (

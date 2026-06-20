@@ -94,12 +94,12 @@ const LowScoreModal: React.FC<{
               📚
             </div>
             <div className="flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-1">Kết quả bài kiểm tra</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-1">Kết quả bài kiểm tra</p>
               <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
                 Hãy ôn lại trước khi tiếp tục!
               </h2>
               <p className="text-slate-400 text-sm mt-1">
-                Bạn đạt <span className="font-black text-orange-400">{score}/{total} câu ({percentage}%)</span>. Điểm chưa đủ 60% — đừng nản nhé!
+                Bạn đạt <span className="font-black text-purple-400">{score}/{total} câu ({percentage}%)</span>. Điểm chưa đủ 60% — đừng nản nhé!
               </p>
             </div>
           </div>
@@ -108,7 +108,7 @@ const LowScoreModal: React.FC<{
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-2">
             <div className="flex justify-between text-[11px] font-black uppercase tracking-widest">
               <span className="text-slate-500">Điểm của bạn</span>
-              <span className="text-orange-400">{percentage}% / 60% cần đạt</span>
+              <span className="text-purple-400">{percentage}% / 60% cần đạt</span>
             </div>
             <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
               <div
@@ -123,7 +123,7 @@ const LowScoreModal: React.FC<{
               className="h-0 border-0 border-t-2 border-dashed border-emerald-500/40 relative -mt-1.5"
               style={{ marginLeft: '60%' }}
             >
-              <span className="absolute left-0 -top-4 text-[9px] font-black text-emerald-500 whitespace-nowrap">Ngưỡng đạt (60%)</span>
+              <span className="absolute left-0 -top-4 text-[9px] font-black text-purple-400 whitespace-nowrap">Ngưỡng đạt (60%)</span>
             </div>
           </div>
 

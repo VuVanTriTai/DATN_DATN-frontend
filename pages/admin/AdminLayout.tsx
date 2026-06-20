@@ -38,7 +38,7 @@ const AdminLayout: React.FC = () => {
           </div>
           {!collapsed && (
             <div>
-              <p className="text-white font-black text-base tracking-tight">AI Buddy</p>
+              <p className="text-white font-black text-base tracking-tight">AI Course</p>
               <p className="text-red-400 text-[10px] font-black uppercase tracking-widest">Admin Panel</p>
             </div>
           )}

@@ -17,16 +17,16 @@ const CourseDashboard = () => {
     <div className="p-10 space-y-8 text-white">
       {/* Course Header */}
       <div className="flex items-center gap-4 text-slate-500 text-sm font-bold uppercase tracking-widest">
-         <span>Khóa học</span> <ChevronRight size={14}/> <span>{data?.planTitle}</span>
+        <span>Khóa học</span> <ChevronRight size={14} /> <span>{data?.planTitle}</span>
       </div>
 
       {/* Tabs Menu */}
       <div className="flex gap-4 bg-[#1e293b] p-2 rounded-2xl border border-slate-800 w-fit">
         {[
-          { id: 'overview', label: 'Tổng quan', icon: <LayoutGrid size={18}/> },
-          { id: 'lessons', label: 'Bài học', icon: <BookOpen size={18}/> },
-          { id: 'students', label: 'Học viên', icon: <Users size={18}/> },
-          { id: 'progress', label: 'Tiến độ', icon: <BarChart3 size={18}/> },
+          { id: 'overview', label: 'Tổng quan', icon: <LayoutGrid size={18} /> },
+          { id: 'lessons', label: 'Bài học', icon: <BookOpen size={18} /> },
+          { id: 'students', label: 'Học viên', icon: <Users size={18} /> },
+          { id: 'progress', label: 'Tiến độ', icon: <BarChart3 size={18} /> },
         ].map(tab => (
           <button
             key={tab.id}
@@ -43,18 +43,18 @@ const CourseDashboard = () => {
       <div className="mt-8">
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in">
-             <div className="bg-[#1e293b] p-8 rounded-[2rem] border border-slate-800">
-                <p className="text-slate-500 text-xs font-black uppercase mb-2">Tổng học viên</p>
-                <p className="text-4xl font-black">{data?.studentCount || 0}</p>
-             </div>
-             <div className="bg-[#1e293b] p-8 rounded-[2rem] border border-slate-800">
-                <p className="text-slate-500 text-xs font-black uppercase mb-2">Tiến độ trung bình</p>
-                <p className="text-4xl font-black text-blue-500">{data?.avgProgress || 0}%</p>
-             </div>
-             <div className="bg-[#1e293b] p-8 rounded-[2rem] border border-slate-800">
-                <p className="text-slate-500 text-xs font-black uppercase mb-2">Số bài học</p>
-                <p className="text-4xl font-black text-emerald-500">{data?.lessonCount || 0}</p>
-             </div>
+            <div className="bg-[#1e293b] p-8 rounded-[2rem] border border-slate-800">
+              <p className="text-slate-500 text-xs font-black uppercase mb-2">Tổng học viên</p>
+              <p className="text-4xl font-black">{data?.studentCount || 0}</p>
+            </div>
+            <div className="bg-[#1e293b] p-8 rounded-[2rem] border border-slate-800">
+              <p className="text-slate-500 text-xs font-black uppercase mb-2">Tiến độ trung bình</p>
+              <p className="text-4xl font-black text-blue-500">{data?.avgProgress || 0}%</p>
+            </div>
+            <div className="bg-[#1e293b] p-8 rounded-[2rem] border border-slate-800">
+              <p className="text-slate-500 text-xs font-black uppercase mb-2">Số bài học</p>
+              <p className="text-4xl font-black text-emerald-500">{data?.lessonCount || 0}</p>
+            </div>
           </div>
         )}
 

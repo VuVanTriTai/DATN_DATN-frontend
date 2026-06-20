@@ -1,8 +1,9 @@
+//SharedPlans.tsx
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { 
-  Share2, User, ChevronRight, DownloadCloud, 
-  Clock, FileSearch, Loader2, BookOpen 
+import {
+  Share2, User, ChevronRight, DownloadCloud,
+  Clock, FileSearch, Loader2, BookOpen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CourseActionMenu from '../../components/shared/CourseActionMenu';
@@ -38,8 +39,8 @@ const SharedPlans = () => {
           alert("Đã thêm thành công vào mục 'Lộ trình lấy về'");
           navigate('/dashboard'); // Chuyển về Dashboard để bắt đầu học
         }
-      } catch (err) {
-        alert("Lỗi khi sao chép lộ trình.");
+      } catch (err: any) {
+        alert("Lỗi khi sao chép lộ trình: " + (err.response?.data?.message || err.message));
       } finally {
         setImportingId(null);
       }
@@ -66,8 +67,8 @@ const SharedPlans = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {plans.length > 0 ? (
             plans.map((p: any) => (
-              <div 
-                key={p._id} 
+              <div
+                key={p._id}
                 className="bg-[#1e293b] p-8 rounded-[2.5rem] border border-slate-800 hover:border-purple-500/50 transition-all group shadow-xl flex flex-col justify-between"
               >
                 <div className="space-y-6">
@@ -75,11 +76,13 @@ const SharedPlans = () => {
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3 bg-purple-500/5 p-3 rounded-2xl border border-purple-500/10 w-fit">
                       <div className="w-8 h-8 bg-purple-600 rounded-xl flex items-center justify-center font-black text-xs">
-                        {p.owner?.fullName?.[0].toUpperCase()}
+                        {(p.instructorId?.fullName || p.owner?.fullName)?.[0].toUpperCase()}
                       </div>
                       <div>
                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Được gửi từ</p>
-                        <p className="text-xs font-bold text-purple-300">{p.owner?.fullName}</p>
+                        <p className="text-xs font-bold text-purple-300">
+                          {p.instructorId?.fullName || p.owner?.fullName}
+                        </p>
                       </div>
                     </div>
                     {/* Menu hành động */}
@@ -91,13 +94,13 @@ const SharedPlans = () => {
                       {p.title}
                     </h3>
                     <div className="flex items-center gap-4 text-slate-500 text-xs font-bold">
-                       <span className="flex items-center gap-1"><BookOpen size={14}/> {p.duration} ngày</span>
-                       <span className="flex items-center gap-1"><Clock size={14}/> {new Date(p.createdAt).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1"><BookOpen size={14} /> {p.duration} ngày</span>
+                      <span className="flex items-center gap-1"><Clock size={14} /> {new Date(p.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => handleImport(p._id)}
                   disabled={importingId === p._id}
                   className="mt-8 w-full py-4 bg-slate-800 hover:bg-purple-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50"
@@ -105,7 +108,7 @@ const SharedPlans = () => {
                   {importingId === p._id ? (
                     <Loader2 className="animate-spin" size={18} />
                   ) : (
-                    <DownloadCloud size={20}/>
+                    <DownloadCloud size={20} />
                   )}
                   {importingId === p._id ? "Đang đồng bộ..." : "Lấy lộ trình về học"}
                 </button>

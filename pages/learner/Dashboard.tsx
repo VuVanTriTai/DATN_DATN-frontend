@@ -70,21 +70,23 @@ const Dashboard = () => {
     return 'not-started';
   };
 
-  const selfPlans = plans.filter(p => p.sourceType === 'self' && p.status !== 'reviewed');
-  const totalCount = selfPlans.length;
-  const inProgressCount = selfPlans.filter(p => getStatus(p) === 'in-progress').length;
-  const completedCount = selfPlans.filter(p => getStatus(p) === 'completed').length;
+  const totalCount = plans.length;
+  const inProgressCount = plans.filter(p => getStatus(p) === 'in-progress').length;
+  const completedCount = plans.filter(p => getStatus(p) === 'completed').length;
 
-  // Client-side filter
-  const filteredPlans = plans.filter(p => {
-    const isAssigned = p.sourceType === 'assigned' || p.status === 'reviewed';
-    let matchSource = false;
-    if (sourceFilter === 'assigned') matchSource = isAssigned;
-    else if (sourceFilter === 'self') matchSource = p.sourceType === 'self' && !isAssigned;
-    else if (sourceFilter === 'imported') matchSource = p.sourceType === 'shared_import' || p.sourceType === 'imported';
-    else matchSource = p.sourceType === sourceFilter;
-    return matchSource && getStatus(p) === statusFilter;
-  });
+  // Client-side filter + sort by progress desc
+  const filteredPlans = plans
+    .filter(p => {
+      const isAssigned = p.sourceType === 'assigned' || p.status === 'reviewed';
+      let matchSource = false;
+      if (sourceFilter === 'assigned') matchSource = isAssigned;
+      else if (sourceFilter === 'self') matchSource = p.sourceType === 'self' && !isAssigned;
+      else if (sourceFilter === 'imported') matchSource = p.sourceType === 'shared_import' || p.sourceType === 'imported';
+      else matchSource = p.sourceType === sourceFilter;
+
+      return matchSource && getStatus(p) === statusFilter;
+    })
+    .sort((a, b) => (b.progress || 0) - (a.progress || 0));
 
   const firstName = user?.fullName?.split(' ').pop() || 'bạn';
 

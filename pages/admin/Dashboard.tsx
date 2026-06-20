@@ -87,7 +87,7 @@ const AdminDashboard: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-black text-white">Dashboard</h1>
-        <p className="text-slate-400 mt-1">Tổng quan hệ thống AI Buddy</p>
+        <p className="text-slate-400 mt-1">Tổng quan hệ thống AI Course</p>
       </div>
 
       {/* Stat Cards Row 1 */}
