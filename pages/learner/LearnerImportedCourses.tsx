@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import { getCategoryLabel } from '../../utils/marketConstants';
 import {
   DownloadCloud, BookOpen, Layers, Clock, Play,
   Loader2, Trash2, AlertTriangle, X, CheckCircle2,
@@ -255,7 +256,7 @@ const LearnerImportedCourses: React.FC = () => {
                     {course.categories && course.categories.length > 0 && (
                       <span className="flex items-center gap-1.5">
                         <BookOpen size={12} className="text-slate-600"/>
-                        {course.categories[0]}
+                        {getCategoryLabel(course.categories[0])}
                       </span>
                     )}
                     <span className="flex items-center gap-1.5">

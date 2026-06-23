@@ -222,7 +222,9 @@ const selfCourses = courses.filter((c) =>
   // Loại bỏ các bản clone trung gian nếu có
   (c.sourceType === 'manual' || c.sourceType === 'self' || !c.originalPlanId) &&
   // Không hiển thị các khóa đang ở trạng thái 'teaching' của học viên khác
-  c.status !== 'teaching'
+  c.status !== 'teaching' &&
+  // Ẩn các bản clone đang trên chợ
+  !c.isPublic
 );
 
 // 3. Tab: Đã qua chỉnh sửa (Các khóa đã xong và gửi lại sinh viên)

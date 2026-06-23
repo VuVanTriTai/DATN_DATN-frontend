@@ -1,12 +1,80 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   Search, Star, Users, BookOpen, X, Loader2,
   GraduationCap, SortAsc, MessageSquare, ChevronDown,
   Award, Filter, RefreshCw, UserCheck, Sparkles,
-  ExternalLink, Layers, Mail, User
+  ExternalLink, Layers, Mail, User, Trash2, Flag, AlertCircle
 } from 'lucide-react';
+
+// ─── Lý do báo cáo ────────────────────────────────────────────────────────────
+const REPORT_REASONS = [
+  { value: 'spam', label: '🚫 Spam / Quảng cáo' },
+  { value: 'inappropriate_content', label: '🔞 Nội dung không phù hợp' },
+  { value: 'wrong_information', label: '❌ Thông tin sai lệch' },
+  { value: 'hate_speech', label: '🤬 Ngôn từ thù địch' },
+  { value: 'other', label: '📝 Lý do khác' },
+];
+
+// ─── Modal Báo cáo Đánh giá Giáo viên ───────────────────────────────────────────
+const RatingReportModal: React.FC<{ ratingId: string; onClose: (success?: boolean) => void }> = ({ ratingId, onClose }) => {
+  const [reason, setReason] = useState('');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!reason) { setError('Vui lòng chọn lý do báo cáo.'); return; }
+    setSubmitting(true); setError('');
+    try {
+      const res = await api.reports.create({ targetType: 'instructorRating', targetId: ratingId, reason, description });
+      if (res.success) onClose(true);
+      else setError(res.message || 'Đã xảy ra lỗi.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Đã xảy ra lỗi.');
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+      <div className="bg-[#0d1117] border border-red-500/20 rounded-3xl p-7 max-w-md w-full shadow-2xl space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center">
+              <Flag size={18} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-black text-base">Báo cáo Đánh giá</h3>
+              <p className="text-slate-500 text-[10px] font-bold">Chọn lý do vi phạm</p>
+            </div>
+          </div>
+          <button onClick={() => onClose()} className="p-2 hover:bg-slate-800 rounded-full text-slate-500"><X size={18} /></button>
+        </div>
+        <div className="space-y-2">
+          {REPORT_REASONS.map(r => (
+            <button key={r.value} onClick={() => setReason(r.value)}
+              className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold transition-all border
+                ${reason === r.value ? 'bg-red-500/15 border-red-500/40 text-red-300' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <textarea rows={2} placeholder="Mô tả thêm (không bắt buộc)..." className="w-full bg-slate-800/60 border border-slate-700 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-red-500/50 resize-none" value={description} onChange={e => setDescription(e.target.value)} />
+        {error && <div className="flex items-center gap-2"><AlertCircle size={13} className="text-red-400" /><p className="text-xs text-red-400">{error}</p></div>}
+        <div className="flex gap-3">
+          <button onClick={() => onClose()} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-sm">Huỷ</button>
+          <button onClick={handleSubmit} disabled={!reason || submitting}
+            className="flex-1 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Flag size={14} />}
+            {submitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const StarDisplay: React.FC<{ value: number; size?: number }> = ({ value, size = 16 }) => (
   <div className="flex items-center gap-0.5">
@@ -34,6 +102,7 @@ const StarPicker: React.FC<{ value: number; onChange: (v: number) => void }> = (
 
 const InstructorDirectory: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [instructors, setInstructors] = useState<any[]>([]);
   const [allFields, setAllFields] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +118,9 @@ const InstructorDirectory: React.FC = () => {
   const [ratingInput, setRatingInput] = useState({ stars: 0, comment: '' });
   const [submitting, setSubmitting] = useState(false);
   const [ratingDone, setRatingDone] = useState(false);
+  const [deletingRating, setDeletingRating] = useState(false);
+  const [reportRatingId, setReportRatingId] = useState<string | null>(null);
+  const [reportToast, setReportToast] = useState('');
 
   // Instructor's market courses sub-panel
   const [marketCourses, setMarketCourses] = useState<any[]>([]);
@@ -125,6 +197,28 @@ const InstructorDirectory: React.FC = () => {
       }
     } catch (err) { alert('Đánh giá thất bại, thử lại sau.'); }
     finally { setSubmitting(false); }
+  };
+
+  const handleDeleteMyRating = async () => {
+    if (!selected) return;
+    if (!window.confirm('Bạn có chắc muốn gỡ đánh giá này không?')) return;
+    try {
+      setDeletingRating(true);
+      const res = await api.instructorDirectory.deleteMyRating(selected._id);
+      if (res.success) {
+        setMyRating(null);
+        setRatingInput({ stars: 0, comment: '' });
+        setRatingDone(false);
+        setInstructors(prev => prev.map(ins =>
+          ins._id === selected._id
+            ? { ...ins, instructorProfile: { ...ins.instructorProfile, avgRating: res.data.avgRating, ratingCount: res.data.ratingCount } }
+            : ins
+        ));
+        const ratingsRes = await api.instructorDirectory.getRatings(selected._id);
+        if (ratingsRes.success) setAllRatings(ratingsRes.data);
+      }
+    } catch { alert('Gỡ đánh giá thất bại, thử lại sau.'); }
+    finally { setDeletingRating(false); }
   };
 
   const resetFilters = () => { setSearch(''); setSelectedField('all'); setSort('rating'); };
@@ -377,6 +471,11 @@ const InstructorDirectory: React.FC = () => {
                     <Sparkles size={32} className="text-emerald-400" />
                     <p className="font-black text-emerald-400">Cảm ơn bạn đã đánh giá!</p>
                     <StarDisplay value={ratingInput.stars} size={20} />
+                    <button onClick={handleDeleteMyRating} disabled={deletingRating}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold transition-all disabled:opacity-50">
+                      {deletingRating ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      Gỡ đánh giá
+                    </button>
                   </div>
                 ) : (
                   <div className="bg-[#0f172a]/60 rounded-2xl border border-slate-800 p-6 space-y-5">
@@ -392,11 +491,20 @@ const InstructorDirectory: React.FC = () => {
                       onChange={e => setRatingInput(p => ({ ...p, comment: e.target.value }))}
                       placeholder="Nhận xét về giáo viên (tùy chọn)..." rows={3}
                       className="w-full bg-[#1e293b] border border-slate-700 rounded-2xl px-5 py-3.5 text-sm outline-none focus:border-amber-500 transition-all placeholder:text-slate-600 resize-none" />
-                    <button onClick={submitRating} disabled={submitting || ratingInput.stars === 0}
-                      className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-amber-900/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95">
-                      {submitting ? <Loader2 size={18} className="animate-spin" /> : <Star size={18} className="fill-white" />}
-                      {myRating ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
-                    </button>
+                    <div className="flex gap-3">
+                      <button onClick={submitRating} disabled={submitting || ratingInput.stars === 0}
+                        className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all shadow-lg shadow-amber-900/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95">
+                        {submitting ? <Loader2 size={18} className="animate-spin" /> : <Star size={18} className="fill-white" />}
+                        {myRating ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
+                      </button>
+                      {myRating && (
+                        <button onClick={handleDeleteMyRating} disabled={deletingRating}
+                          className="px-4 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center"
+                          title="Gỡ đánh giá">
+                          {deletingRating ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -412,26 +520,75 @@ const InstructorDirectory: React.FC = () => {
                   <div className="text-center py-8 text-slate-600 text-sm font-medium">Chưa có đánh giá nào. Hãy là người đầu tiên!</div>
                 ) : (
                   <div className="space-y-3">
-                    {allRatings.map((r: any) => (
-                      <div key={r._id} className="bg-[#0f172a]/60 rounded-2xl border border-slate-800 p-5 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-xl bg-slate-700 flex items-center justify-center text-xs font-black">
-                              {r.learner?.fullName?.[0]?.toUpperCase() || '?'}
+                    {allRatings.map((r: any) => {
+                      const isMyReview = r.learner?._id === user?.id || r.learner?.id === user?.id;
+                      return (
+                        <div key={r._id} className={`bg-[#0f172a]/60 rounded-2xl border p-5 space-y-2 ${
+                          isMyReview ? 'border-amber-500/30' : 'border-slate-800'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-xl bg-slate-700 flex items-center justify-center text-xs font-black">
+                                {r.learner?.fullName?.[0]?.toUpperCase() || 'N'}
+                              </div>
+                              <div>
+                                <span className="text-sm font-bold text-slate-300">{r.learner?.fullName || 'Người dùng đã xoá'}</span>
+                                {isMyReview && (
+                                  <span className="ml-2 text-[9px] font-black text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">Bạn</span>
+                                )}
+                              </div>
                             </div>
-                            <span className="text-sm font-bold text-slate-300">{r.learner?.fullName || 'Học viên'}</span>
+                          <div className="flex items-center gap-2">
+                              <StarDisplay value={r.stars} size={13} />
+                              {isMyReview ? (
+                                <button
+                                  onClick={handleDeleteMyRating}
+                                  disabled={deletingRating}
+                                  title="Gỡ đánh giá của bạn"
+                                  className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/15 text-red-400 rounded-lg transition-all disabled:opacity-50"
+                                >
+                                  {deletingRating ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setReportRatingId(r._id)}
+                                  title="Báo cáo đánh giá vi phạm"
+                                  className="p-1.5 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/15 text-slate-600 hover:text-orange-400 rounded-lg transition-all"
+                                >
+                                  <Flag size={11} />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <StarDisplay value={r.stars} size={13} />
+                          {r.comment && <p className="text-slate-400 text-sm leading-relaxed pl-10">{r.comment}</p>}
+                          <p className="text-[10px] text-slate-600 pl-10">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</p>
                         </div>
-                        {r.comment && <p className="text-slate-400 text-sm leading-relaxed pl-10">{r.comment}</p>}
-                        <p className="text-[10px] text-slate-600 pl-10">{new Date(r.createdAt).toLocaleDateString('vi-VN')}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Report Modal cho InstructorRating */}
+      {reportRatingId && (
+        <RatingReportModal
+          ratingId={reportRatingId}
+          onClose={(success) => {
+            setReportRatingId(null);
+            if (success) {
+              setReportToast('✅ Đã gửi báo cáo. Cảm ơn bạn!');
+              setTimeout(() => setReportToast(''), 4000);
+            }
+          }}
+        />
+      )}
+      {reportToast && (
+        <div className="fixed bottom-6 right-6 z-[400] px-5 py-3.5 bg-emerald-950 border border-emerald-500/30 text-emerald-300 rounded-2xl text-sm font-bold shadow-2xl">
+          {reportToast}
         </div>
       )}
     </div>

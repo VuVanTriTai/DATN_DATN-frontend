@@ -27,6 +27,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import UserManagement from './pages/admin/UserManagement';
 import CourseManagement from './pages/admin/CourseManagement';
+import ReportManagement from './pages/admin/ReportManagement';
 /**
  * 1. Component Bảo vệ Tuyến đường
  */
@@ -122,6 +123,7 @@ function AppRoutes() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="users"     element={<UserManagement />} />
         <Route path="courses"   element={<CourseManagement />} />
+        <Route path="reports"   element={<ReportManagement />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

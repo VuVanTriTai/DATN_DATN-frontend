@@ -118,6 +118,8 @@ export const api = {
     // Learner: Xoá khoá học đã import khỏi kho cá nhân
     removeImport: (id: string) =>
       axiosInstance.delete(`/market/my-imports/${id}`).then(res => res.data),
+    getRecommendations: () => axiosInstance.get("/market/recommendations").then(res => res.data),
+
   },
 
   // ── THƯ MỤC GIÁO VIÊN (Instructor Directory) ──────────────────────────────
@@ -149,6 +151,10 @@ export const api = {
     // Lấy tất cả đánh giá của 1 giáo viên
     getRatings: (instructorId: string) =>
       axiosInstance.get(`/instructor-directory/${instructorId}/ratings`).then(r => r.data),
+
+    // Học viên gỡ đánh giá của mình cho 1 giáo viên
+    deleteMyRating: (instructorId: string) =>
+      axiosInstance.delete(`/instructor-directory/${instructorId}/my-rating`).then(r => r.data),
   },
 
   // --- DÀNH CHO GIÁO VIÊN (INSTRUCTOR) ---
@@ -189,12 +195,12 @@ export const api = {
     // Tạo khoá học thủ công — giảng viên nhập tiêu đề + số ngày, sinh khung bài rỗng
     createManualCourse: (data: { title: string; duration: number }) =>
       axiosInstance.post('/instructor/manual-course', data).then(r => r.data),
-  cloneCourseAsSelf: (planId: string) =>
-  axiosInstance.post(`/instructor/courses/${planId}/clone-as-self`).then(res => res.data),
-  generateAIQuiz: (lessonId: string, data: { content: string }) =>
+    cloneCourseAsSelf: (planId: string) =>
+      axiosInstance.post(`/instructor/courses/${planId}/clone-as-self`).then(res => res.data),
+    generateAIQuiz: (lessonId: string, data: { content: string }) =>
       axiosInstance.post(`/instructor/lesson/${lessonId}/generate-ai-quiz`, data).then(res => res.data),
 
-},
+  },
 
   // --- QUẢN LÝ BÀI TẬP (ASSIGNMENT) ---
   assignment: {
@@ -393,4 +399,46 @@ export const api = {
     unfriend: (userId: string) =>
       axiosInstance.delete(`/friends/${userId}`).then(r => r.data),
   },
+
+  reviews: {
+    // Lấy danh sách bình luận (hỗ trợ phân trang)
+    get: (planId: string, page = 1, limit = 10) =>
+      axiosInstance.get(`/reviews/${planId}`, { params: { page, limit } }).then(res => res.data),
+    // Lấy tổng kết rating (average + phân phối sao)
+    summary: (planId: string) =>
+      axiosInstance.get(`/reviews/summary/${planId}`).then(res => res.data),
+    // Gửi bình luận / đánh giá mới
+    create: (planId: string, data: { content: string; rating?: number; parentId?: string }) =>
+      axiosInstance.post(`/reviews/${planId}`, data).then(res => res.data),
+    // Toggle like / dislike
+    react: (reviewId: string, type: 'like' | 'dislike') =>
+      axiosInstance.post(`/reviews/react/${reviewId}`, { type }).then(res => res.data),
+    // Xóa bình luận
+    delete: (reviewId: string) =>
+      axiosInstance.delete(`/reviews/${reviewId}`).then(res => res.data),
+  },
+
+  // 10. BÁO CÁO VI PHẠM ────────────────────────────────────────────────────────
+  reports: {
+    /** Gửi báo cáo vi phạm */
+    create: (data: {
+      targetType: 'course' | 'review' | 'instructorRating';
+      targetId: string;
+      reason: string;
+      description?: string;
+    }) => axiosInstance.post('/reports', data).then(res => res.data),
+
+    /** Admin: Lấy danh sách báo cáo */
+    getAll: (params?: { targetType?: string; status?: string; page?: number; limit?: number }) =>
+      axiosInstance.get('/reports', { params }).then(res => res.data),
+
+    /** Admin: Xử lý báo cáo (gỡ nội dung vi phạm) */
+    resolve: (id: string, adminNote?: string) =>
+      axiosInstance.patch(`/reports/${id}/resolve`, { adminNote }).then(res => res.data),
+
+    /** Admin: Bỏ qua báo cáo (không gỡ nội dung) */
+    dismiss: (id: string, adminNote?: string) =>
+      axiosInstance.patch(`/reports/${id}/dismiss`, { adminNote }).then(res => res.data),
+  },
+
 };

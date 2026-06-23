@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Users, BookOpen,
-  LogOut, Shield, ChevronRight, Menu, X
+  LogOut, Shield, ChevronRight, Menu, X, Flag
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -16,6 +16,7 @@ const AdminLayout: React.FC = () => {
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: <Users size={20} />, label: 'Quản lý Tài khoản', path: '/admin/users' },
     { icon: <BookOpen size={20} />, label: 'Quản lý Khoá học', path: '/admin/courses' },
+    { icon: <Flag size={20} />, label: 'Báo cáo Vi phạm', path: '/admin/reports' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

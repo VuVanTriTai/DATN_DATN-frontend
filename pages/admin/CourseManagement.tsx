@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../../services/adminService';
+import { MARKET_CATEGORIES } from '../../utils/marketConstants';
 import {
   Search, BookOpen, Globe, Lock, Star,
   Trash2, RefreshCw, Eye, ChevronLeft, ChevronRight,
@@ -80,6 +81,23 @@ const CourseDetailModal = ({ courseId, onClose }: { courseId: string; onClose: (
                 <p className="text-slate-400 text-xs mt-1">Danh mục</p>
               </div>
             </div>
+
+            {/* Categories */}
+            {data.course.categories?.length > 0 && (
+              <div className="border border-white/10 rounded-2xl p-4">
+                <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Danh mục</p>
+                <div className="flex gap-2 flex-wrap">
+                  {data.course.categories.map((c: string) => {
+                    const found = MARKET_CATEGORIES.find(cat => cat.value === c);
+                    return (
+                      <span key={c} className="px-2.5 py-1 bg-white/5 text-slate-300 rounded-lg text-xs">
+                        {found ? found.label : c}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Owner */}
             <div className="border border-white/10 rounded-2xl p-4">

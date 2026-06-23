@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { getCategoryLabel } from '../../utils/marketConstants';
 import {
   ShoppingBag, BookOpen, Layers, Clock, DownloadCloud,
   Loader2, Trash2, AlertTriangle, X, CheckCircle2, TrendingUp,
@@ -251,7 +252,7 @@ const InstructorMarketListings: React.FC = () => {
                     {course.categories && course.categories.length > 0 && (
                       <span className="flex items-center gap-1.5">
                         <BookOpen size={12} className="text-slate-600" />
-                        {course.categories.join(', ')}
+                        {course.categories.map(c => getCategoryLabel(c)).join(', ')}
                       </span>
                     )}
                     <span className="flex items-center gap-1.5">

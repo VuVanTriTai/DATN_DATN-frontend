@@ -6,6 +6,7 @@ import {
   MoreVertical, UserPlus, Share2, Globe, Trash2, X, Search,
   Send, Loader2, Users, CheckCircle, UserCheck, Tag, Sparkles
 } from 'lucide-react';
+import { MARKET_CATEGORIES } from '../../utils/marketConstants';
 
 interface CourseActionMenuProps {
   plan: {
@@ -14,6 +15,7 @@ interface CourseActionMenuProps {
     owner?: string | any;
     instructor?: string | any;
     isPublic?: boolean;
+    originalPlanId?: string | null;
     progress?: number;
   };
   onRefresh: () => void;
@@ -47,7 +49,7 @@ export const CourseActionMenu: React.FC<CourseActionMenuProps> = ({ plan, onRefr
   const [shareErrorMsg, setShareErrorMsg] = useState<string | null>(null);
 
   // Market share state
-  const [marketCategories, setMarketCategories] = useState<string>('Lập trình');
+  const [marketCategories, setMarketCategories] = useState<string>('lap_trinh');
   const [marketLevel, setMarketLevel] = useState<string>('basic');
   const [marketTags, setMarketTags] = useState<string>('');
   const [submittingMarket, setSubmittingMarket] = useState(false);
@@ -232,9 +234,11 @@ export const CourseActionMenu: React.FC<CourseActionMenuProps> = ({ plan, onRefr
         } else {
           alert(res?.message || "Không thể xóa lộ trình.");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        alert("Lỗi khi xóa lộ trình học.");
+        // Hiển thị message từ server nếu có (ví dụ: lỗi không cho xóa bản Market)
+        const serverMsg = err?.response?.data?.message;
+        alert(serverMsg || "Lỗi khi xóa lộ trình học.");
       }
     }
   };
@@ -639,12 +643,9 @@ export const CourseActionMenu: React.FC<CourseActionMenuProps> = ({ plan, onRefr
                   onChange={(e) => setMarketCategories(e.target.value)}
                   className="w-full bg-[#0d121f] border border-slate-800 p-3 rounded-xl text-white outline-none focus:border-indigo-500 transition-all cursor-pointer"
                 >
-                  <option value="Lập trình">Lập trình (IT)</option>
-                  <option value="Toán học">Toán học (Mathematics)</option>
-                  <option value="Kinh tế">Kinh tế & Tài chính</option>
-                  <option value="Ngoại ngữ">Ngoại ngữ / Ngôn ngữ</option>
-                  <option value="Y học">Y học & Chăm sóc sức khỏe</option>
-                  <option value="Khác">Lĩnh vực Khác</option>
+                  {MARKET_CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
                 </select>
               </div>
 

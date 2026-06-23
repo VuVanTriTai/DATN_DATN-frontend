@@ -1,13 +1,109 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../services/api';
-import { 
-  Search, RotateCcw, Eye, 
-  DownloadCloud, X, Lock, BookOpen, 
+import {
+  Search, RotateCcw,
+  DownloadCloud, X, BookOpen,
   Layers, Info, Loader2, Sparkles, User,
   CheckCircle2, AlertTriangle, Star,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, TrendingUp, Compass,
+  MessageSquare, Flag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ReviewSection from '../../components/shared/ReviewSection';
+import { useAuth } from '../../context/AuthContext';
+import { MARKET_CATEGORIES } from '../../utils/marketConstants';
+
+// ─── Lý do báo cáo ────────────────────────────────────────────────────────────
+const REPORT_REASONS = [
+  { value: 'spam', label: '🚫 Spam / Quảng cáo' },
+  { value: 'inappropriate_content', label: '🔞 Nội dung không phù hợp' },
+  { value: 'wrong_information', label: '❌ Thông tin sai lệch' },
+  { value: 'hate_speech', label: '🤬 Ngôn từ thù địch' },
+  { value: 'copyright', label: '©️ Vi phạm bản quyền' },
+  { value: 'other', label: '📝 Lý do khác' },
+];
+
+// ─── Modal Báo cáo Khóa học ───────────────────────────────────────────────────
+const CourseReportModal = ({ courseId, onClose }: { courseId: string; onClose: (success?: boolean) => void }) => {
+  const [reason, setReason] = React.useState('');
+  const [description, setDescription] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const handleSubmit = async () => {
+    if (!reason) {
+      setError('Vui lòng chọn lý do báo cáo.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await api.reports.create({ targetType: 'course', targetId: courseId, reason, description });
+      if (res.success) onClose(true);
+      else setError(res.message || 'Đã xảy ra lỗi.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Đã xảy ra lỗi.');
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+
+      {/* Nội dung modal */}
+      <div className="bg-[#0d1117] border border-red-500/20 rounded-3xl p-7 max-w-md w-full shadow-2xl space-y-5">
+
+        {/* Phần đầu modal */}
+        <div className="flex items-center justify-between">
+
+          {/* Icon báo cáo và tiêu đề */}
+          <div className="flex items-center gap-3">
+            {/* Icon báo cáo  */}
+            <div className="w-10 h-10 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center">
+              <Flag size={18} className="text-red-400" />
+            </div>
+
+            {/* Tiêu đề báo cáo */}
+            <div>
+              <h3 className="text-white font-black text-base">Báo cáo Khóa học</h3>
+              <p className="text-slate-500 text-[10px] font-bold">Chọn lý do vi phạm</p>
+            </div>
+
+          </div>
+          {/* Icon đóng */}
+          <button onClick={() => onClose()} className="p-2 hover:bg-slate-800 rounded-full text-slate-500 transition-colors"> <X size={18} /></button>
+        </div>
+
+        {/* Phần chọn lý do */}
+        <div className="space-y-2">
+
+          {/* Danh sách các lý do báo cáo */}
+          {REPORT_REASONS.map(r => (
+            <button key={r.value} onClick={() => setReason(r.value)}
+
+              className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold transition-all border
+                ${reason === r.value ? 'bg-red-500/15 border-red-500/40 text-red-300' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              {r.label}
+            </button>
+
+          ))}
+        </div>
+
+        <textarea rows={2} placeholder="Mô tả thêm (không bắt buộc)..." className="w-full bg-slate-800/60 border border-slate-700 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-red-500/50 resize-none" value={description} onChange={e => setDescription(e.target.value)} />
+
+        {error && <p className="text-xs text-blue-400">{error}</p>}
+
+        {/* Nút gửi và hủy */}
+        <div className="flex gap-3">
+          <button onClick={() => onClose()} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-sm transition-colors">Huỷ</button>
+          <button onClick={handleSubmit} disabled={!reason || submitting} className="flex-1 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Flag size={14} />}
+            {submitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) => (
@@ -51,32 +147,34 @@ const SkeletonCard = () => (
       <div className="h-5 bg-white/5 rounded-lg w-3/4" />
       <div className="h-4 bg-white/5 rounded-lg w-1/2" />
       <div className="h-px bg-white/5 my-3" />
-      <div className="flex gap-2">
-        <div className="h-9 bg-white/5 rounded-xl flex-1" />
-        <div className="h-9 bg-white/5 rounded-xl flex-1" />
-      </div>
+      <div className="flex gap-2"><div className="h-9 bg-white/5 rounded-xl flex-1" /><div className="h-9 bg-white/5 rounded-xl flex-1" /></div>
     </div>
   </div>
 );
 
-
 const Market = () => {
   const navigate = useNavigate();
-  
+  const { user } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null); // Ref để điều khiển Carousel
+
   const [courses, setCourses] = useState<any[]>([]);
+  const [recs, setRecs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingRecs, setLoadingRecs] = useState(true);
+
   const [previewData, setPreviewData] = useState<any[] | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [confirmCourse, setConfirmCourse] = useState<any>(null);
-  
-  const [loading, setLoading] = useState(true);
+
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  
+  const [reportCourseId, setReportCourseId] = useState<string | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCourses, setTotalCourses] = useState(0);
-  
+
   const [filters, setFilters] = useState({
     search: '',
     instructorSearch: '',
@@ -90,16 +188,39 @@ const Market = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // 1. Hàm cuộn Carousel
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
+  // 2. Lấy đề cử
+  const fetchRecommendations = async () => {
+    try {
+      setLoadingRecs(true);
+      const res = await api.market.getRecommendations();
+      if (res.success) setRecs(res.data.courses || []);
+    } catch (err) {
+      console.error("Lỗi lấy đề cử:", err);
+    } finally {
+      setLoadingRecs(false);
+    }
+  };
+
+  // 3. Lấy danh sách chính
   const fetchMarketCourses = useCallback(async (pageToFetch = 1) => {
     try {
       setLoading(true);
-      const res = await api.market.getCourses({ 
-        ...filters, 
-        page: pageToFetch, 
-        limit: 12, 
-        isPublic: true 
-      });
+      const params: any = { page: pageToFetch, limit: 12, isPublic: true };
+      if (filters.search) params.search = filters.search;
+      if (filters.instructorSearch) params.instructorSearch = filters.instructorSearch;
+      if (filters.category !== 'all') params.category = filters.category;
+      if (filters.level !== 'all') params.level = filters.level;
+
+      const res = await api.market.getCourses(params);
       if (res.success) {
         setCourses(res.data.courses || []);
         setTotalPages(res.data.totalPages || 1);
@@ -114,28 +235,32 @@ const Market = () => {
   }, [filters]);
 
   useEffect(() => {
+    fetchRecommendations();
     fetchMarketCourses(1);
   }, [filters, fetchMarketCourses]);
+
+  const handleOpenPreview = async (course: any) => {
+    setSelectedCourse(course);
+    setLoadingPreview(true);
+    try {
+      // Tải Syllabus của khóa học
+      const previewRes = await api.market.getPreview(course._id);
+      if (previewRes.success) setPreviewData(previewRes.data);
+    } catch (err) {
+      showToast('Không thể tải dữ liệu.', 'error');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
     fetchMarketCourses(page);
   };
 
-  const handleOpenPreview = async (course: any) => {
-    setSelectedCourse(course);
-    setLoadingPreview(true);
-    try {
-      const res = await api.market.getPreview(course._id);
-      if (res.success) setPreviewData(res.data);
-    } catch (err) { showToast('Không thể tải bản xem trước.', 'error'); }
-    finally { setLoadingPreview(false); }
-  };
-
   const handleImport = async (id: string) => {
     if (isImporting) return;
-    // Tìm course để hiện modal confirm
-    const course = courses.find(c => c._id === id) || selectedCourse;
+    const course = courses.find(c => c._id === id) || recs.find(c => c._id === id) || selectedCourse;
     setConfirmCourse(course);
   };
 
@@ -155,326 +280,280 @@ const Market = () => {
   };
 
   const resetFilters = () => setFilters({ search: '', instructorSearch: '', category: 'all', level: 'all', sort: 'newest' });
+  const isFiltering = filters.search || filters.instructorSearch || filters.category !== 'all' || filters.level !== 'all';
 
   return (
     <>
-    <div className="p-6 lg:p-8 space-y-8 text-white min-h-screen">
-      
-      {/* HEADER */}
-      <header className="space-y-2 text-center max-w-2xl mx-auto">
-        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter flex items-center justify-center gap-3">
-          <Sparkles className="text-blue-500" size={40}/> AI Course Market
-        </h1>
-        <p className="text-slate-500 font-medium italic">
-          Khám phá và tải về các lộ trình học tập tối ưu được chia sẻ bởi cộng đồng và chuyên gia.
-        </p>
-      </header>
-
-      {/* BỘ LỌC */}
-      <div className="bg-[#1e293b] p-6 rounded-[2rem] border border-slate-800 space-y-4 shadow-2xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          {/* Tìm theo tên khóa học */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-1">Tên khóa học</label>
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={18} />
-              <input 
-                type="text" 
-                placeholder="Tìm tên khóa học..."
-                className="w-full bg-[#0f172a] border border-slate-700 p-3.5 pl-12 rounded-2xl outline-none focus:border-blue-500 text-sm transition-all placeholder:text-slate-600"
-                value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
-              />
-            </div>
+      <div className="p-6 lg:p-10 space-y-12 text-white min-h-screen bg-[#0f172a]">
+        {/* HEADER */}
+        <header className="space-y-3 text-center max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest mb-2">
+            <TrendingUp size={12} /> Marketplace Cộng đồng
           </div>
-
-          {/* Tìm theo giảng viên */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-violet-400 uppercase tracking-widest ml-1">Tên / Email giảng viên</label>
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors" size={18} />
-              <input 
-                type="text" 
-                placeholder="Tìm theo giảng viên..."
-                className="w-full bg-[#0f172a] border border-slate-700 p-3.5 pl-12 rounded-2xl outline-none focus:border-violet-500 text-sm transition-all placeholder:text-slate-600"
-                value={filters.instructorSearch}
-                onChange={(e) => setFilters({...filters, instructorSearch: e.target.value})}
-              />
-            </div>
-          </div>
-
-          {/* Danh mục */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-1">Danh mục</label>
-            <select 
-              className="w-full bg-[#0f172a] border border-slate-700 p-3.5 rounded-2xl outline-none text-sm cursor-pointer hover:border-slate-600 transition-all appearance-none"
-              value={filters.category}
-              onChange={(e) => setFilters({...filters, category: e.target.value})}
-            >
-              <option value="all">Tất cả danh mục</option>
-              <option value="lap_trinh">Lập trình</option>
-              <option value="ai_ml">AI & Machine Learning</option>
-              <option value="kinh_doanh">Kinh doanh</option>
-              <option value="ngoai_ngu">Ngoại ngữ</option>
-              <option value="khoa_hoc">Khoa học</option>
-            </select>
-          </div>
-
-          {/* Cấp độ + Reset */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-1">Cấp độ</label>
-            <div className="flex gap-2">
-              <select 
-                className="flex-1 bg-[#0f172a] border border-slate-700 p-3.5 rounded-2xl outline-none text-sm cursor-pointer hover:border-slate-600 transition-all appearance-none"
-                value={filters.level}
-                onChange={(e) => setFilters({...filters, level: e.target.value})}
-              >
-                <option value="all">Tất cả</option>
-                <option value="Easy">Cơ bản</option>
-                <option value="Medium">Trung bình</option>
-                <option value="Hard">Nâng cao</option>
-              </select>
-              <button 
-                onClick={resetFilters}
-                className="bg-slate-800 hover:bg-slate-700 p-3.5 rounded-2xl text-xs font-black flex items-center gap-1 transition-all border border-slate-700 active:scale-95 shrink-0"
-                title="Đặt lại bộ lọc"
-              >
-                <RotateCcw size={16}/>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-1">
-          <p className="text-xs text-slate-500">
-            Tìm thấy <span className="text-white font-bold">{totalCourses}</span> khóa học
-            {filters.instructorSearch && (
-              <span className="ml-2 text-violet-400 font-bold">· Giảng viên: "{filters.instructorSearch}"</span>
-            )}
+          <h1 className="text-4xl lg:text-6xl font-black tracking-tighter flex items-center justify-center gap-3 text-white">
+            <Sparkles className="text-blue-500" size={48} /> AI Course Market
+          </h1>
+          <p className="text-slate-400 font-medium text-sm lg:text-base max-w-xl mx-auto leading-relaxed">
+            Khám phá tri thức từ chuyên gia. Hệ thống đề cử lộ trình học phù hợp nhất dựa trên sở thích của bạn.
           </p>
-          {(filters.search || filters.instructorSearch || filters.category !== 'all' || filters.level !== 'all') && (
-            <button onClick={resetFilters} className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-bold transition-colors">
-              <RotateCcw size={12}/> Đặt lại
-            </button>
-          )}
-        </div>
-      </div>
+        </header>
 
-      {/* GRID */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Array(8).fill(0).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : courses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <BookOpen size={64} className="text-slate-700" />
-          <p className="text-slate-500 font-bold">Không tìm thấy khóa học phù hợp.</p>
-          <button onClick={resetFilters} className="text-blue-400 hover:text-blue-300 text-sm font-bold transition-colors">
-            Xóa bộ lọc
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {courses.map((course) => (
-            <div key={course._id} className="bg-[#1e293b] rounded-[2.5rem] overflow-hidden border border-slate-800 group hover:border-blue-500/50 transition-all shadow-xl flex flex-col hover:-translate-y-1 duration-300">
-              <div className="aspect-video bg-gradient-to-br from-slate-800 to-slate-900 relative flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity">
-                   <Layers size={100} className="absolute -right-5 -bottom-5" />
-                </div>
-                <BookOpen size={48} className="text-slate-700 group-hover:text-blue-500/50 transition-colors" />
-                <span className={`absolute top-4 right-4 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-tighter shadow-lg
-                  ${course.level === 'Hard' ? 'bg-red-500/20 text-red-400' : course.level === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                  {course.level}
-                </span>
+        {/* PHẦN 1: 🌟 GỢI Ý DÀNH CHO BẠN */}
+        {!isFiltering && recs.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-2xl font-black italic flex items-center gap-3 text-white">
+                <Star className="text-amber-400 fill-amber-400" size={24} /> Gợi ý dành cho bạn
+              </h2>
+              <div className="flex gap-2">
+                <button onClick={() => scroll('left')} className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-slate-700 hover:text-white transition-all"><ChevronLeft size={20} /></button>
+                <button onClick={() => scroll('right')} className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-slate-700 hover:text-white transition-all"><ChevronRight size={20} /></button>
               </div>
+            </div>
 
-              <div className="p-6 flex-1 flex flex-col space-y-4">
-                <div className="flex-1 space-y-2">
-                  <h3 className="font-bold text-lg leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                     <Layers size={12}/> <span>{course.duration} ngày học</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 py-4 border-t border-slate-800/50">
-                   <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-inner">
-                      {course.owner?.fullName?.[0] || 'U'}
-                   </div>
-                   <div className="text-[10px] min-w-0 flex-1">
-                      <p className="text-slate-500 font-bold uppercase tracking-tighter">Chia sẻ bởi</p>
-                      <p className="text-slate-300 font-black truncate">{course.owner?.fullName}</p>
-                      {course.owner?.email && (
-                        <p className="text-slate-600 truncate">{course.owner.email}</p>
+            <div ref={scrollRef} className="flex gap-6 overflow-x-auto pb-8 snap-x no-scrollbar">
+              {loadingRecs ? (
+                Array(3).fill(0).map((_, i) => <div key={i} className="min-w-[320px] h-[250px] bg-white/5 rounded-[2.5rem] animate-pulse" />)
+              ) : (
+                recs.map((course) => (
+                  <div key={course._id} className="min-w-[320px] md:min-w-[420px] snap-start bg-gradient-to-br from-[#1e293b] to-[#0f172a] rounded-[2.5rem] border border-blue-500/10 hover:border-blue-500/40 transition-all p-8 relative overflow-hidden group shadow-2xl flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><Sparkles size={100} /></div>
+                    <div className="relative z-10 space-y-5">
+                      <div className="flex justify-between items-start">
+                        <span className="px-3 py-1 rounded-lg bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest">Gợi ý AI</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase">{course.duration} ngày học</span>
+                      </div>
+                      {course.categories && course.categories.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {course.categories.map((cat: string) => {
+                            const found = MARKET_CATEGORIES.find(c => c.value === cat);
+                            return (
+                              <span key={cat} className="px-2.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold">
+                                {found ? found.label : cat}
+                              </span>
+                            );
+                          })}
+                        </div>
                       )}
-                   </div>
-                </div>
-
-                {course.instructorId && (
-                  <div className="flex items-center gap-2 px-3.5 py-2.5 bg-purple-500/10 border border-purple-500/20 rounded-2xl mt-[-8px]">
-                    <CheckCircle2 size={13} className="text-purple-400 shrink-0" />
-                    <span className="text-[10px] text-purple-300 font-medium truncate">
-                      Đã qua chỉnh sửa bởi: <strong className="font-bold">{course.instructorId.fullName}</strong>
-                    </span>
+                      <h3 className="text-2xl font-black leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
+                      <div className="flex flex-wrap items-center gap-4 text-slate-400 text-xs font-bold">
+                        <div className="flex items-center gap-2">
+                          <Compass size={14} className="text-emerald-500" />
+                          <span>{course.studentCount || 0} học viên</span>
+                        </div>
+                        {course.avgRating > 0 && (
+                          <div className="flex items-center gap-1 text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20">
+                            <Star size={12} className="fill-amber-400" />
+                            <span>{course.avgRating}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="relative z-10 flex gap-2 mt-8">
+                      <button onClick={() => handleOpenPreview(course)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black text-[10px] uppercase transition-all border border-white/10">Khái quát</button>
+                      <button onClick={() => handleImport(course._id)} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase transition-all flex items-center justify-center gap-2"><DownloadCloud size={14} /> Lấy ngay</button>
+                    </div>
                   </div>
-                )}
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => handleOpenPreview(course)}
-                    className="flex items-center justify-center gap-2 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-[10px] font-black uppercase transition-all"
-                  >
-                    <Eye size={14}/> Khái quát
-                  </button>
-                  <button 
-                    onClick={() => handleImport(course._id)}
-                    className="flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase transition-all shadow-lg shadow-blue-900/20"
-                  >
-                    <DownloadCloud size={14}/> Lấy bài
-                  </button>
+        {/* PHẦN 2: BỘ LỌC & DANH SÁCH TẤT CẢ */}
+        <section className="space-y-8">
+          <h2 className="text-2xl font-black italic flex items-center gap-3 px-2">
+            <Layers className="text-blue-500" size={24} /> {isFiltering ? 'Kết quả tìm kiếm' : 'Tất cả lộ trình'}
+          </h2>
+
+          {/* BỘ LỌC */}
+          <div className="bg-[#1e293b]/50 p-6 rounded-[2.5rem] border border-slate-800 backdrop-blur-md shadow-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-1">Tên khóa học</label>
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500" size={18} />
+                  <input type="text" placeholder="Tìm tên..." className="w-full bg-[#0f172a] border border-slate-700 p-3.5 pl-12 rounded-2xl outline-none focus:border-blue-500 text-sm transition-all" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-violet-400 uppercase tracking-widest ml-1">Giảng viên hướng dẫn</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400" size={18} />
+                  <input type="text" placeholder="Tên / Email..." className="w-full bg-[#0f172a] border border-slate-700 p-3.5 pl-12 rounded-2xl outline-none focus:border-violet-500 text-sm transition-all" value={filters.instructorSearch} onChange={(e) => setFilters({ ...filters, instructorSearch: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest ml-1">Danh mục</label>
+                <select className="w-full bg-[#0f172a] border border-slate-700 p-3.5 rounded-2xl outline-none text-sm cursor-pointer appearance-none animate-none" value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}>
+                  <option value="all">Tất cả danh mục</option>
+                  {MARKET_CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 lg:col-span-1">
+                <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest ml-1">Cấp độ</label>
+                <div className="flex gap-2">
+                  <select className="flex-1 bg-[#0f172a] border border-slate-700 p-3.5 rounded-2xl outline-none text-sm appearance-none" value={filters.level} onChange={(e) => setFilters({ ...filters, level: e.target.value })}>
+                    <option value="all">Tất cả</option>
+                    <option value="Easy">Cơ bản</option>
+                    <option value="Medium">Trung bình</option>
+                    <option value="Hard">Nâng cao</option>
+                  </select>
+                  <button onClick={resetFilters} className="bg-slate-800 hover:bg-red-500/20 hover:text-red-400 p-3.5 rounded-2xl transition-all border border-slate-700"><RotateCcw size={18} /></button>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
-      {/* PAGINATION CONTROLS */}
-      {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8 pt-4">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none text-slate-300 active:scale-95"
-            title="Trang trước"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const pageNum = i + 1;
-            const isSelected = pageNum === currentPage;
-            const showPage = 
-              totalPages <= 7 || 
-              pageNum === 1 || 
-              pageNum === totalPages || 
-              (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
-
-            if (!showPage) {
-              if (pageNum === 2 || pageNum === totalPages - 1) {
-                return (
-                  <span key={`ellipsis-${pageNum}`} className="w-10 h-10 flex items-center justify-center text-slate-500 font-bold text-sm">
-                    ...
-                  </span>
-                );
-              }
-              return null;
-            }
-
-            return (
-              <button
-                key={pageNum}
-                onClick={() => handlePageChange(pageNum)}
-                className={`w-10 h-10 rounded-xl font-bold text-sm transition-all active:scale-95 border
-                  ${isSelected 
-                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20' 
-                    : 'bg-slate-800 border-slate-700/50 hover:bg-slate-700 hover:text-white text-slate-300'
-                  }`}
-              >
-                {pageNum}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800 border border-slate-700/50 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none text-slate-300 active:scale-95"
-            title="Trang sau"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      )}
-
-      {/* ── Confirm Modal ── */}
-      {confirmCourse && (
-        <ConfirmImportModal
-          course={confirmCourse}
-          onConfirm={doImport}
-          onCancel={() => setConfirmCourse(null)}
-          loading={isImporting}
-        />
-      )}
-
-      {/* MODAL XEM KHÁI QUÁT */}
-      {previewData && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#1e293b] w-full max-w-lg rounded-[3rem] p-10 border border-slate-700 shadow-2xl space-y-8 flex flex-col max-h-[85vh]">
-            
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <h3 className="text-2xl font-black text-white leading-tight">{selectedCourse?.title}</h3>
-                <p className="text-blue-500 text-xs font-black uppercase tracking-widest">Cấu trúc chi tiết các ngày</p>
-                {selectedCourse?.owner && (
-                  <p className="text-slate-500 text-xs flex items-center gap-1.5 mt-1 font-medium">
-                    <User size={12} className="text-slate-500 shrink-0"/>
-                    <span>Chia sẻ bởi: <strong className="text-slate-300">{selectedCourse.owner.fullName}</strong></span>
-                  </p>
-                )}
-                {selectedCourse?.instructorId && (
-                  <p className="text-purple-400 text-xs flex items-center gap-1.5 mt-1.5 font-medium">
-                    <CheckCircle2 size={12} className="text-purple-400 shrink-0"/>
-                    <span>Đã qua chỉnh sửa bởi: <strong className="text-purple-300 font-bold">{selectedCourse.instructorId.fullName}</strong></span>
-                  </p>
-                )}
-              </div>
-              <button onClick={() => setPreviewData(null)} className="p-2 hover:bg-slate-800 rounded-full transition-all">
-                <X size={24}/>
-              </button>
+          {/* GRID KẾT QUẢ */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array(8).fill(0).map((_, i) => <SkeletonCard key={i} />)}
             </div>
-
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-              {previewData.map((item: any) => (
-                <div 
-                  key={item._id}
-                  onClick={() => alert("Bạn cần 'Lấy bài' về kho cá nhân để xem nội dung chi tiết bài này.")}
-                  className="p-5 bg-[#0f172a]/50 rounded-[1.5rem] border border-slate-800 flex justify-between items-center group cursor-pointer hover:border-blue-500/50 transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-[10px] font-black text-blue-500 border border-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner">
-                      {item.dayNumber}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {courses.map((course) => (
+                <div key={course._id} className="bg-[#1e293b] rounded-[2.5rem] overflow-hidden border border-slate-800 group hover:border-blue-500/50 transition-all shadow-xl flex flex-col hover:-translate-y-1 duration-300">
+                  <div className="aspect-video bg-gradient-to-br from-slate-800 to-slate-900 relative flex items-center justify-center overflow-hidden">
+                    <BookOpen size={48} className="text-slate-700 group-hover:text-blue-500/50 transition-colors" />
+                    <span className={`absolute top-4 right-4 text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-tighter shadow-lg
+                    ${course.level === 'Hard' ? 'bg-red-500/20 text-red-400' : course.level === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                      {course.level}
                     </span>
-                    <p className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{item.title}</p>
                   </div>
-                  <Lock size={16} className="text-slate-700 group-hover:text-blue-400 transition-colors"/>
+
+                  <div className="p-6 flex-1 flex flex-col space-y-4">
+                    <div className="flex-1 space-y-2">
+                      {course.categories && course.categories.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {course.categories.map((cat: string) => {
+                            const found = MARKET_CATEGORIES.find(c => c.value === cat);
+                            return (
+                              <span key={cat} className="px-2.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold">
+                                {found ? found.label : cat}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <h3 className="font-bold text-lg leading-tight line-clamp-2 group-hover:text-blue-400 transition-colors">{course.title}</h3>
+                      <div className="flex items-center justify-between">
+                        <p className="text-slate-500 text-[10px] font-bold uppercase">{course.duration} ngày học</p>
+                        {course.avgRating > 0 && (
+                          <div className="flex items-center gap-1 text-amber-500 font-black text-xs">
+                            <Star size={10} fill="currentColor" /> {course.avgRating}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* MENTOR INFO */}
+                    {course.instructorId && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/5 border border-purple-500/10 rounded-xl">
+                        <CheckCircle2 size={12} className="text-purple-400 shrink-0" />
+                        <span className="text-[9px] text-purple-300 font-bold uppercase truncate">Mentor: {course.instructorId.fullName}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
+                      <div className="w-7 h-7 bg-slate-800 rounded-full flex items-center justify-center font-bold text-[10px] border border-slate-700">{course.owner?.fullName?.[0]}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter leading-none">Tạo bởi</p>
+                        <p className="text-[11px] text-slate-300 font-black truncate">{course.owner?.fullName}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-emerald-500 text-[10px] font-black">
+                        <Compass size={10} /> {course.studentCount}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => handleOpenPreview(course)} className="py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-[10px] font-black uppercase transition-all">Khái quát</button>
+                      <button onClick={() => handleImport(course._id)} className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase shadow-lg">Lấy bài</button>
+                    </div>
+                    <button
+                      onClick={() => setReportCourseId(course._id)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-[9px] font-bold text-slate-600 hover:text-orange-400 hover:bg-orange-400/5 rounded-xl transition-all border border-transparent hover:border-orange-400/20"
+                    >
+                      <Flag size={10} /> Báo cáo vi phạm
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+          )}
 
-            <div className="space-y-4">
-               <div className="flex items-center gap-3 p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10">
-                  <Info size={20} className="text-blue-500 shrink-0"/>
-                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                    Nhấn <strong>Lấy bài</strong> để AI đồng bộ nội dung bài giảng, công thức và bộ câu hỏi trắc nghiệm vào tài khoản của bạn.
-                  </p>
-               </div>
-               <button 
-                onClick={() => handleImport(selectedCourse?._id)}
-                disabled={isImporting}
-                className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-900/30 disabled:opacity-50"
-               >
-               {isImporting ? <Loader2 className="animate-spin"/> : <DownloadCloud size={24}/>}
-               Lấy lộ trình học ngay
-               </button>
+          {/* PAGINATION */}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-12 pt-6 border-t border-white/5">
+              <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 disabled:opacity-20 hover:bg-slate-700 transition-all"><ChevronLeft size={20} /></button>
+              <div className="bg-slate-800 px-6 h-12 rounded-2xl flex items-center justify-center font-black text-sm tracking-widest border border-white/5">
+                TRANG {currentPage} / {totalPages}
+              </div>
+              <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 disabled:opacity-20 hover:bg-slate-700 transition-all"><ChevronRight size={20} /></button>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* MODAL PREVIEW (Đã tích hợp Review đúng cách) */}
+      {previewData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#1e293b] w-full max-w-2xl h-[90vh] rounded-[3rem] p-10 border border-slate-700 shadow-2xl space-y-8 flex flex-col">
+            <div className="flex justify-between items-start shrink-0">
+              <div className="space-y-1">
+                <h3 className="text-2xl font-black text-white leading-tight">{selectedCourse?.title}</h3>
+                <p className="text-blue-500 text-xs font-black uppercase tracking-widest">Cấu trúc lộ trình {selectedCourse?.duration} ngày</p>
+              </div>
+              <button onClick={() => setPreviewData(null)} className="p-2 hover:bg-slate-800 rounded-full text-slate-500"><X size={24} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-10 pr-2 custom-scrollbar">
+              <div className="space-y-3">
+                {previewData.map((item: any) => (
+                  <div key={item._id} className="p-4 bg-[#0f172a]/50 rounded-2xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all">
+                    <span className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] font-black text-blue-500 border border-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-all">{item.dayNumber}</span>
+                    <p className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{item.title}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* PHẦN ĐÁNH GIÁ & BÌNH LUẬN */}
+              <div className="border-t border-slate-800 pt-8">
+                <ReviewSection
+                  planId={selectedCourse?._id}
+                  userId={user?.id || ''}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 shrink-0 pt-4 border-t border-slate-800">
+              <button onClick={() => handleImport(selectedCourse?._id)} disabled={isImporting} className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-900/40">
+                {isImporting ? <Loader2 className="animate-spin" /> : <DownloadCloud size={24} />} Lấy lộ trình ngay
+              </button>
+              <button
+                onClick={() => selectedCourse && setReportCourseId(selectedCourse._id)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-[11px] font-bold text-slate-600 hover:text-orange-400 hover:bg-orange-400/5 rounded-2xl transition-all border border-transparent hover:border-orange-400/20"
+              >
+                <Flag size={13} /> Báo cáo vi phạm
+              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
 
-      {/* Toast */}
+      {confirmCourse && <ConfirmImportModal course={confirmCourse} onConfirm={doImport} onCancel={() => setConfirmCourse(null)} loading={isImporting} />}
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {reportCourseId && (
+        <CourseReportModal
+          courseId={reportCourseId}
+          onClose={(success) => {
+            setReportCourseId(null);
+            if (success) showToast('✅ Đã gửi báo cáo. Cảm ơn bạn!', 'success');
+          }}
+        />
+      )}
     </>
   );
 };
