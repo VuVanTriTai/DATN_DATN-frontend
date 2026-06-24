@@ -6,7 +6,7 @@ import {
   Layers, Info, Loader2, Sparkles, User,
   CheckCircle2, AlertTriangle, Star,
   ChevronLeft, ChevronRight, TrendingUp, Compass,
-  MessageSquare, Flag
+  MessageSquare, Flag, Users, Flame, ArrowUpDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ReviewSection from '../../components/shared/ReviewSection';
@@ -180,7 +180,7 @@ const Market = () => {
     instructorSearch: '',
     category: 'all',
     level: 'all',
-    sort: 'newest'
+    sort: 'weekly_downloads'
   });
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -219,6 +219,7 @@ const Market = () => {
       if (filters.instructorSearch) params.instructorSearch = filters.instructorSearch;
       if (filters.category !== 'all') params.category = filters.category;
       if (filters.level !== 'all') params.level = filters.level;
+      if (filters.sort) params.sort = filters.sort;
 
       const res = await api.market.getCourses(params);
       if (res.success) {
@@ -279,7 +280,7 @@ const Market = () => {
     finally { setIsImporting(false); }
   };
 
-  const resetFilters = () => setFilters({ search: '', instructorSearch: '', category: 'all', level: 'all', sort: 'newest' });
+  const resetFilters = () => setFilters({ search: '', instructorSearch: '', category: 'all', level: 'all', sort: 'weekly_downloads' });
   const isFiltering = filters.search || filters.instructorSearch || filters.category !== 'all' || filters.level !== 'all';
 
   return (
@@ -405,6 +406,47 @@ const Market = () => {
                 </div>
               </div>
             </div>
+
+            {/* DÒNG SẮP XẾP */}
+            <div className="mt-5 pt-5 border-t border-slate-700/50 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-slate-400">
+                <ArrowUpDown size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Sắp xếp theo:</span>
+              </div>
+              <button
+                onClick={() => setFilters({ ...filters, sort: 'weekly_downloads' })}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                  filters.sort === 'weekly_downloads'
+                    ? 'bg-orange-500/20 border-orange-500/50 text-orange-300'
+                    : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Flame size={13} className={filters.sort === 'weekly_downloads' ? 'text-orange-400' : ''} />
+                Lượt tải nhiều nhất tuần
+              </button>
+              <button
+                onClick={() => setFilters({ ...filters, sort: 'students' })}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                  filters.sort === 'students'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                    : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Users size={13} className={filters.sort === 'students' ? 'text-emerald-400' : ''} />
+                Học viên đông nhất
+              </button>
+              <button
+                onClick={() => setFilters({ ...filters, sort: 'newest' })}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                  filters.sort === 'newest'
+                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                    : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <TrendingUp size={13} className={filters.sort === 'newest' ? 'text-blue-400' : ''} />
+                Mới nhất
+              </button>
+            </div>
           </div>
 
           {/* GRID KẾT QUẢ */}
@@ -463,8 +505,15 @@ const Market = () => {
                         <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter leading-none">Tạo bởi</p>
                         <p className="text-[11px] text-slate-300 font-black truncate">{course.owner?.fullName}</p>
                       </div>
-                      <div className="flex items-center gap-1 text-emerald-500 text-[10px] font-black">
-                        <Compass size={10} /> {course.studentCount}
+                      <div className="flex flex-col items-end gap-0.5">
+                        <div className="flex items-center gap-1 text-emerald-500 text-[10px] font-black">
+                          <Users size={10} /> {course.studentCount}
+                        </div>
+                        {course.weeklyDownloads > 0 && (
+                          <div className="flex items-center gap-1 text-orange-400 text-[9px] font-black">
+                            <Flame size={9} /> {course.weeklyDownloads}/tuần
+                          </div>
+                        )}
                       </div>
                     </div>
 
